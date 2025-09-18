@@ -1,0 +1,23 @@
+- name: Chargement du module ip_tables
+  import_tasks: enable_modules.yml
+
+- name: Debug après ip_tables
+  debug:
+    msg: "ip_tables activé"
+
+- name: Configuration Docker rootless pour l'utilisateur
+  import_tasks: rootless_setup.yml
+
+- name: Debug après rootless
+  debug:
+    msg: "docker rootless configuré"
+
+- name: Configuration de Docker compose
+  import_tasks: docker_compose.yml
+
+- name: Debug après docker-compose
+  debug:
+    msg: "docker-compose configuré"
+
+- name: Securisation du docker
+  import_tasks: secure_docker.yml

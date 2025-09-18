@@ -1,0 +1,95 @@
+- name: Récupérer l'UID de l'utilisateur {{ docker_user }}
+  shell: id -u {{ docker_user }}
+  register: user_id
+  changed_when: false
+
+- name: Activer la persistance (linger) pour {{ docker_user }}
+  command: loginctl enable-linger {{ docker_user }}
+  args:
+    creates: /var/lib/systemd/linger/{{ docker_user }}
+
+- name: Télécharger le script Docker rootless
+  get_url:
+    url: https://get.docker.com/rootless
+    dest: /tmp/docker-rootless.sh
+    mode: '0755'
+
+- name: Installer Docker rootless si pas encore installé
+  shell: /tmp/docker-rootless.sh
+  become: true
+  become_user: "{{ docker_user }}"
+  environment:
+    PATH: "/usr/bin:/bin:/usr/sbin:/sbin"
+    XDG_RUNTIME_DIR: "/run/user/{{ user_id.stdout }}"
+  args:
+    creates: "/home/{{ docker_user }}/bin/docker"
+
+- name: Ajouter PATH au .bashrc
+  become: true
+  become_user: "{{ docker_user }}"
+  lineinfile:
+    path: "/home/{{ docker_user }}/.bashrc"
+    line: 'export PATH=$HOME/bin:$PATH'
+    insertafter: EOF
+    create: yes
+
+- name: Ajouter XDG_RUNTIME_DIR au .bashrc
+  become: true
+  become_user: "{{ docker_user }}"
+  lineinfile:
+    path: "/home/{{ docker_user }}/.bashrc"
+    line: 'export XDG_RUNTIME_DIR=/run/user/$(id -u)'
+    insertafter: EOF
+    create: yes
+
+- name: Ajouter DOCKER_HOST au .bashrc
+  become: true
+  become_user: "{{ docker_user }}"
+  lineinfile:
+    path: "/home/{{ docker_user }}/.bashrc"
+    line: 'export DOCKER_HOST=unix://$XDG_RUNTIME_DIR/docker.sock'
+    insertafter: EOF
+    create: yes
+
+- name: Créer un lien symbolique vers le binaire docker rootless
+  file:
+    src: "/home/{{ docker_user }}/bin/docker"
+    dest: "/usr/local/bin/docker"
+    state: link
+    force: yes
+
+- name: Redémarrer le service Docker rootless pour {{ docker_user }}
+  become: true
+  become_user: "{{ docker_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ user_id.stdout }}"
+    PATH: "/home/{{ docker_user }}/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  shell: |
+    systemctl --user daemon-reexec
+    systemctl --user daemon-reload
+    systemctl --user restart docker
+
+- name: Activer le service Docker rootless au démarrage
+  become: true
+  become_user: "{{ docker_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ user_id.stdout }}"
+    PATH: "/home/{{ docker_user }}/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  shell: |
+    systemctl --user enable docker
+
+- name: Vérifier que Docker fonctionne
+  become: true
+  become_user: "{{ docker_user }}"
+  shell: |
+    source ~/.bashrc && docker version --format '{{ "{{.Server.Version}}" }}'
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ user_id.stdout }}"
+    PATH: "/home/{{ docker_user }}/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  register: docker_check
+  changed_when: false
+  failed_when: docker_check.rc != 0
+
+- name: Afficher la version de Docker rootless
+  debug:
+    msg: "Docker rootless fonctionne : version {{ docker_check.stdout }}"

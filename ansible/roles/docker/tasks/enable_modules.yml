@@ -1,0 +1,12 @@
+- name: Charger ip_tables maintenant
+  ansible.builtin.modprobe:
+    name: ip_tables
+    state: present
+
+- name: Charger ip_tables au boot
+  copy:
+    dest: /etc/modules-load.d/docker-rootless.conf
+    content: "ip_tables\n"
+    owner: root
+    group: root
+    mode: '0644'

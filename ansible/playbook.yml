@@ -1,0 +1,10 @@
+- name: Automatisation configuration mysql dans la vm
+  hosts: vms
+  become: true
+  
+  roles:
+    - role: user
+    - role: docker
+    # - role: pgbounce # mettre en place le load balancer
+    # - role: setup_db
+    # - role: monitoring # mettre en place la replication de la db locale

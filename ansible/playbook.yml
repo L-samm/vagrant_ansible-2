@@ -4,7 +4,7 @@
   
   roles:
     - role: user
-    - role: docker
-    # - role: pgbounce # mettre en place le load balancer
-    # - role: setup_db
-    # - role: monitoring # mettre en place la replication de la db locale
+    - role: konstruktoid.docker_rootless
+    - role: setup_db # Mettre en place la vm master et replica
+    # - role: pgbounce # Mettre en place le load balancer
+    # - role: monitoring

@@ -5,6 +5,9 @@
   roles:
     - role: user
     - role: konstruktoid.docker_rootless
-    - role: setup_app # Mettre en place la vm avec l'app et la db
-    # - role: backup
-    # - role: monitoring
+      vars:
+        docker_user_bashrc: true
+    - role: setup_app
+    - role: monitoring # Mettre en place la vm avec l'app et la db
+    - role: backup
+    - role: monitoring

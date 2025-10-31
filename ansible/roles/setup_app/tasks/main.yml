@@ -3,21 +3,22 @@
   register: admin_db_uid
   changed_when: false
 
-# - name: Cloner le repo app dans la VM
-  # ansible.builtin.git:
-    # repo: {{ repo_url }}
-    # dest: "/home/{{ docker_user }}/app"
-    # version: main
-  # become: true
-  # become_user: "{{ docker_user }}"
-
 - name: Copier le code app dans la VM
   ansible.builtin.synchronize:
-    src: "../../app/"
+    src: "{{ playbook_dir }}/../app/"
     dest: "/home/{{ docker_user }}/app"
     recursive: yes
   become: true
   become_user: "{{ docker_user }}"
+
+- name: Générer le fichier .env pour Laravel
+  ansible.builtin.template:
+    src: "templates/env.j2"
+    dest: "/home/{{ docker_user }}/app/.env"
+    owner: "{{ docker_user }}"
+    group: "{{ docker_user }}"
+    mode: "0644"
+  when: inventory_hostname == 'vm1'
 
 - name: Déployer l'app et la db via docker_compose
   become: true
@@ -26,7 +27,7 @@
     project_src: "/home/{{ docker_user }}/app"
     files:
       - docker-compose.yaml
-    state: present
+    state: restarted
     build: always
     docker_cli: "/home/{{ docker_user }}/bin/docker"
     docker_host: "unix:///run/user/{{ admin_db_uid.stdout }}/docker.sock"
@@ -34,7 +35,7 @@
 
 - name: Vérifier que le container master est en ligne
   community.docker.docker_container_info:
-    name: pg_master
+    name: db
     docker_host: "unix:///run/user/{{ admin_db_uid.stdout }}/docker.sock"
   register: master_info
   when: inventory_hostname == 'vm1'

@@ -1,1 +1,13 @@
 repo_url: git@github.com:Sh8tan/T-CLO-901.git
+
+app_name: "MyApp"
+app_env: "production"
+app_debug: false
+app_url: "https://myapp.example.com"
+
+db_connection: "mysql"
+db_host: "db"
+db_port: 3306
+db_name: "my_database"
+db_user: "my_user"
+db_password: "base64:DJYTvaRkEZ/YcQsX3TMpB0iCjgme2rhlIOus9A1hnj4="  # à chiffrer avec ansible-vault

@@ -1,0 +1,35 @@
+- name: Récupérer l'UID de admin_db
+  ansible.builtin.command: id -u admin_db
+  register: admin_db_uid
+  changed_when: false
+
+- name: Get current timestamp
+  ansible.builtin.set_fact:
+    timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+
+- name: Create backup directory
+  ansible.builtin.file:
+    path: "{{ backup_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Create backup script
+  ansible.builtin.copy:
+    dest: /usr/local/bin/backup_app.sh
+    content: |
+      #!/bin/bash
+      timestamp=$(date +%Y%m%dT%H%M%S)
+      /usr/bin/docker exec db sh -c "mysqldump -u{{ db_user }} -p{{ db_password }} {{ db_name }}" > {{ backup_dir }}/{{ db_name }}-$timestamp.sql
+      gzip {{ backup_dir }}/{{ db_name }}-$timestamp.sql
+      tar czf {{ backup_dir }}/{{ app_name }}-data-$timestamp.tar.gz -C {{ app_path }} storage .env
+    owner: "{{ docker_user }}"
+    group: "{{ docker_user }}"
+    mode: '0755'
+
+- name: Schedule daily backup via cron
+  ansible.builtin.cron:
+    name: "Laravel + MySQL backup"
+    user: "{{ docker_user }}"
+    job: "/usr/local/bin/backup_app.sh"
+    hour: 2
+    minute: 0

@@ -5,6 +5,6 @@
   roles:
     - role: user
     - role: konstruktoid.docker_rootless
-    - role: setup_db # Mettre en place la vm master et replica
-    # - role: pgbounce # Mettre en place le load balancer
+    - role: setup_app # Mettre en place la vm avec l'app et la db
+    # - role: backup
     # - role: monitoring

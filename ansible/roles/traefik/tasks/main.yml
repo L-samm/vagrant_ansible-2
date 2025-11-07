@@ -1,0 +1,85 @@
+---
+# tasks file for traefik
+
+- name: Copy Traefik configuration file to the virtual machine
+  copy:
+    src: "{{ role_path }}/templates/traefik.yml"
+    dest: /tmp/traefik.yml
+    mode: "0644"
+
+- name: Copy Traefik configuration file to the virtual machine
+  copy:
+    src: "{{ role_path }}/templates/Dockerfile"
+    dest: /tmp/Dockerfile
+    mode: "0644"
+
+- name: Ensure app_network exists
+  community.docker.docker_network:
+    name: app_network
+    state: present
+    driver: overlay
+
+- name: Ensure service_network exists
+  community.docker.docker_network:
+    name: service_network
+    state: present
+    driver: overlay
+
+- name: Remove old docker image if it exists
+  docker_image:
+      source: local
+      name: traefik_ms_build
+      tag: latest
+      force_absent: true
+  ignore_errors: yes
+
+- name: Remove the Docker service if it exists
+  community.docker.docker_swarm_service:
+   name: traefik
+   state: absent
+  ignore_errors: yes
+
+- name: Build Docker image
+  community.docker.docker_image:
+    name: traefik_ms_build
+    tag: latest
+    state: present
+    build:
+      dockerfile: Dockerfile
+      path: /tmp/
+    source: build
+
+- name: Create and deploy Traefik service in Docker Swarm
+  community.docker.docker_swarm_service:
+    name: traefik
+    image: traefik_ms_build
+    networks:
+      - app_network
+    replicas: 1
+    labels:
+      traefik.enable: "false"
+    publish:
+      - mode: host
+        protocol: tcp
+        published_port: 8080
+        target_port: 8080
+      - mode: host
+        protocol: tcp
+        published_port: 5000
+        target_port: 5000
+      - mode: host
+        protocol: tcp
+        published_port: 3000
+        target_port: 3000
+    mode: replicated
+    docker_host: "unix:///var/run/docker.sock"
+    state: present
+    mounts:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+
+# - name: Clean up temporary files on the virtual machine
+#   file:
+#     path: /tmp/*
+#     state: absent

@@ -1,0 +1,64 @@
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+entryPoints:
+  web:
+    address: ":80"
+  service:
+    address: ":3000"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    network: app_network
+    watch: true
+
+log:
+  level: DEBUG
+  filePath: logs/traefik.log
+
+accessLog:
+  filePath: logs/access.log
+  format: "json"
+
+api:
+  dashboard: true
+  insecure: true
+
+http:
+  routers:
+    app:
+      entryPoints:
+        - web
+      rule: Host(`laravel.local`)
+      service: laravel
+
+    service:
+      entryPoints:
+        - service
+      rule: Host(`grafana.local`)
+      service: grafana
+
+
+  services:
+    laravel:
+      loadBalancer:
+        servers:
+          - url: http://laravel:80/
+        passHostHeader: true
+
+    grafana:
+      loadBalancer:
+        servers:
+          - url: http://grafana:3000/
+        passHostHeader: true
+
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: you@example.com
+      storage: /acme.json
+      httpChallenge:
+        entryPoint: web

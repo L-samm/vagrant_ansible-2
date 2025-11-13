@@ -1,0 +1,14 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+# Managed by Ansible role {{ ansible_role_name }}
+#
+# See https://github.com/containerd/nerdctl/issues/2847
+#
+
+abi <abi/4.0>,
+include <tunables/global>
+
+{{ rootlesskit_path }} flags=(unconfined) {
+  userns,
+
+  include if exists <local/{{ rootlesskit_path[1:] | regex_replace('/', '.') }}>
+}

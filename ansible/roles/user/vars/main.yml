@@ -1,0 +1,2 @@
+# recupérer le password depuis Terraform ou un secret
+admin_password: 'root'

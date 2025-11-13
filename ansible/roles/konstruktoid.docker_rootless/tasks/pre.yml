@@ -1,0 +1,165 @@
+---
+- name: Debian family dependencies
+  become: true
+  tags:
+    - privileged
+  when:
+    - ansible_facts.os_family == "Debian"
+    - install_dependencies
+  block:
+    - name: Run apt update
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 1800
+      changed_when: false
+
+    - name: Install Debian family packages
+      ansible.builtin.apt:
+        name:
+          - acl
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - dbus-user-session
+          - gnupg
+          - iptables
+          - libpam-systemd
+          - lsb-release
+          - python3-docker
+          - python3-pexpect
+          - python3-pip
+          - python3-six
+          - slirp4netns
+          - uidmap
+        state: present
+        install_recommends: false
+
+    - name: Install fuse-overlayfs
+      ansible.builtin.apt:
+        name: fuse-overlayfs
+        state: present
+        install_recommends: false
+      when: >
+        ansible_facts.distribution == "Debian" and
+        (ansible_facts.kernel is version("4.18", ">=") and
+        ansible_facts.kernel is version("5.11", "<="))
+
+- name: RedHat family dependencies
+  become: true
+  tags:
+    - privileged
+  when:
+    - ansible_facts.os_family == "RedHat"
+    - install_dependencies
+  block:
+    - name: Install RedHat family packages
+      ansible.builtin.dnf:
+        name:
+          - acl
+          - curl
+          - iptables
+          - python3-pip
+        state: present
+
+    - name: Install RedHat family slirp4netns
+      ansible.builtin.dnf:
+        name: slirp4netns
+        state: present
+      when:
+        - ansible_facts.distribution != "Amazon"
+
+    - name: Install slirp4netns binary
+      ansible.builtin.get_url:
+        url: https://github.com/rootless-containers/slirp4netns/releases/download/v1.3.1/slirp4netns-x86_64
+        dest: /usr/bin/slirp4netns
+        checksum: sha256:4bc5d6c311f9fa7ae00ce54aefe10c2afaf0800fe9e99f32616a964ed804a9e1
+        owner: root
+        group: root
+        mode: "0755"
+      when:
+        - ansible_facts.distribution == "Amazon"
+
+    - name: Python3-rpm installation
+      ansible.builtin.dnf:
+        name: python3-rpm
+        state: present
+      when:
+        - ansible_facts.distribution == "RedHat"
+
+    - name: Install python3 setuptools
+      ansible.builtin.dnf:
+        name: python3-setuptools
+        state: present
+      when:
+        - ansible_facts.distribution == "AlmaLinux"
+
+    - name: Install python3 docker
+      ansible.builtin.pip:
+        name:
+          - docker
+          - urllib3<2
+        state: present
+
+- name: Sysctl and kernel modules
+  become: true
+  tags:
+    - privileged
+  when:
+    - configure_sysctl
+  block:
+    - name: Sysctl net.ipv4.ip_forward
+      ansible.posix.sysctl:
+        name: net.ipv4.ip_forward
+        value: "1"
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Sysctl kernel.unprivileged_userns_clone
+      ansible.posix.sysctl:
+        name: kernel.unprivileged_userns_clone
+        value: "1"
+        sysctl_set: true
+        state: present
+        reload: true
+      when:
+        - ansible_facts.distribution == "Debian"
+        - (ansible_facts.distribution_version | int != 0  and ansible_facts.distribution_version is version('11', '<'))
+
+    - name: Sysctl net.ipv4.ip_unprivileged_port_start=0
+      ansible.posix.sysctl:
+        name: net.ipv4.ip_unprivileged_port_start
+        value: "0"
+        sysctl_set: true
+        state: present
+        reload: true
+      when:
+        - docker_allow_privileged_ports
+
+    - name: Sysctl net.ipv4.ping_group_range=0 2147483647
+      ansible.posix.sysctl:
+        name: net.ipv4.ping_group_range
+        value: 0 2147483647
+        sysctl_set: true
+        state: present
+        reload: true
+      when:
+        - docker_allow_ping
+
+    - name: Sysctl user.max_user_namespaces=28633
+      ansible.posix.sysctl:
+        name: user.max_user_namespaces
+        value: "28633"
+        sysctl_set: true
+        state: present
+        reload: true
+      when:
+        - not docker_rootful
+
+    - name: Load the overlay module
+      community.general.modprobe:
+        name: overlay
+        state: present
+        params: permit_mounts_in_userns=1
+      when:
+        - ansible_facts.distribution == "Debian"

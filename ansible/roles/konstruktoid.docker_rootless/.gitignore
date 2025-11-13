@@ -1,0 +1,17 @@
+*.deb
+*.html
+*.log
+*.retry
+*.rpm
+*suid.list
+.ansible
+.cache
+.docker
+.env.yml
+.scannerwork
+.sonar
+.tox
+.vagrant
+.yamllint
+drafts/*
+hosts

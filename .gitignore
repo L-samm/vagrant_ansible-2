@@ -1,5 +1,1 @@
 .vagrant
-ansible/roles/user/vars/main.yml
-ansible/roles/backup/vars/main.yml
-ansible/roles/konstruktoid.docker_rootless/*
-.env

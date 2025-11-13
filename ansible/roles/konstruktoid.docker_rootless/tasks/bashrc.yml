@@ -1,0 +1,51 @@
+---
+- name: Docker user bash config and completion
+  become: true
+  become_user: "{{ docker_user }}"
+  block:
+    - name: Add .bash_completion script
+      ansible.builtin.copy:
+        src: bash_completion
+        dest: "{{ docker_user_info.home }}/.bash_completion"
+        owner: "{{ docker_user }}"
+        group: "{{ docker_user }}"
+        mode: "0750"
+
+    - name: Create user bash completion dir
+      ansible.builtin.file:
+        path: "{{ docker_user_info.home }}/.bash_completion.d"
+        state: directory
+        owner: "{{ docker_user }}"
+        group: "{{ docker_user }}"
+        mode: "0750"
+
+    - name: Stat bash completion
+      ansible.builtin.stat:
+        path: "{{ docker_user_info.home }}/.bash_completion.d/docker"
+      register: docker_completion
+
+    - name: Extend Docker user bashrc config
+      ansible.builtin.blockinfile:
+        path: "{{ docker_user_info.home }}/.bashrc"
+        owner: "{{ docker_user }}"
+        group: "{{ docker_user }}"
+        mode: "0644"
+        block: |
+          export XDG_RUNTIME_DIR="/run/user/{{ docker_user_info.uid }}"
+          export DOCKER_HOST="unix:///run/user/{{ docker_user_info.uid }}/docker.sock"
+          export PATH="{{ docker_user_info.home }}/bin:{{ docker_user_info.home }}/.local/bin:$PATH"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - docker"
+
+    - name: Install Docker bash completion
+      environment:
+        PATH: "{{ docker_user_info.home }}/bin:{{ ansible_facts.env.PATH }}"
+      ansible.builtin.shell: |
+        set -o pipefail
+        docker completion bash | tee "{{ docker_user_info.home }}/.bash_completion.d/docker"
+      args:
+        executable: /bin/bash
+      register: completion_bash
+      changed_when: completion_bash.rc == 0
+      failed_when: completion_bash.rc != 0
+      when:
+        - not docker_completion.stat.exists

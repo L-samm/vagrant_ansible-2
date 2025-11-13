@@ -1,0 +1,137 @@
+---
+dependency:
+  name: galaxy
+  enabled: true
+driver:
+  name: vagrant
+  provider:
+    name: virtualbox
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      callback_whitelist: profile_tasks
+  env:
+    ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/..:/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles
+  log: true
+  inventory:
+    host_vars:
+      almalinux10:
+        docker_add_alias: true
+        docker_allow_ping: false
+        docker_allow_privileged_ports: true
+        docker_rootful: false
+        docker_rootful_enabled: false
+        docker_user: dockeruser
+      noble:
+        docker_add_alias: true
+        docker_allow_ping: false
+        docker_allow_privileged_ports: true
+        docker_rootful: false
+        docker_rootful_enabled: false
+        docker_user: dockeruser
+        docker_user_bashrc: false
+        docker_compose: false
+      nobleroot:
+        docker_add_alias: false
+        docker_allow_ping: true
+        docker_allow_privileged_ports: false
+        docker_rootful: true
+        docker_rootful_enabled: false
+        docker_user: dockeruser
+        docker_user_bashrc: false
+        docker_compose: false
+      trixie:
+        docker_add_alias: true
+        docker_allow_ping: true
+        docker_allow_privileged_ports: false
+        docker_rootful: false
+        docker_user: trixieuser
+        docker_user_bashrc: false
+        docker_compose: false
+platforms:
+  - name: almalinux10
+    box: almalinux/10-kitten-x86_64_v2
+    config_options:
+      vm.boot_timeout: 600
+    provider_raw_config_args:
+      - customize ['modifyvm', :id, '--natdnshostresolver1', 'on']
+    instance_raw_config_args:
+      - vbguest.auto_update = false
+    memory: 1024
+  - name: noble
+    box: bento/ubuntu-24.04
+    config_options:
+      vm.boot_timeout: 600
+      synced_folder: false
+      ssh.key_type: ed25519
+    provider_raw_config_args:
+      - customize ["modifyvm", :id, "--cableconnected1", "on"]
+      - customize ['modifyvm', :id, '--uart1', '0x3F8', '4']
+      - customize ['modifyvm', :id, '--uartmode1', 'file', File::NULL]
+    instance_raw_config_args:
+      - "vbguest.installer_options = { allow_kernel_upgrade: false }"
+      - vbguest.auto_update = false
+    memory: 2048
+  - name: nobleroot
+    box: bento/ubuntu-24.04
+    config_options:
+      vm.boot_timeout: 600
+      synced_folder: false
+      ssh.key_type: ed25519
+    provider_raw_config_args:
+      - customize ["modifyvm", :id, "--cableconnected1", "on"]
+      - customize ['modifyvm', :id, '--uart1', '0x3F8', '4']
+      - customize ['modifyvm', :id, '--uartmode1', 'file', File::NULL]
+    instance_raw_config_args:
+      - "vbguest.installer_options = { allow_kernel_upgrade: false }"
+      - vbguest.auto_update = false
+    memory: 2048
+  - name: trixie
+    box: bento/debian-13
+    config_options:
+      vm.boot_timeout: 600
+    provider_raw_config_args:
+      - customize ['modifyvm', :id, '--natdnshostresolver1', 'on']
+    instance_raw_config_args:
+      - vbguest.auto_update = false
+    memory: 1024
+verifier:
+  name: ansible
+scenario:
+  name: default
+  create_sequence:
+    - dependency
+    - create
+    - prepare
+  check_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - create
+    - prepare
+    - converge
+    - check
+    - destroy
+  converge_sequence:
+    - dependency
+    - create
+    - prepare
+    - converge
+  destroy_sequence:
+    - dependency
+    - cleanup
+    - destroy
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy

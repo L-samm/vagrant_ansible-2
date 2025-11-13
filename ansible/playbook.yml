@@ -8,6 +8,6 @@
       vars:
         docker_user_bashrc: true
     - role: setup_app
-    - role: traefik
+    #- role: traefik
     - role: backup
     - role: monitoring

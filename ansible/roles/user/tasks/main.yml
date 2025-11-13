@@ -9,6 +9,13 @@
   register: passwd_hash
   no_log: true
 
+- name: Vérifier si l'utilisateur admin_db existe déjà
+  ansible.builtin.getent:
+    database: passwd
+    name: admin_db
+  register: result
+  failed_when: false
+
 - name: Créer un utilisateur admin_db + mettre un mdp + sudo + accès ssh
   ansible.builtin.user:
     name: admin_db
@@ -16,7 +23,22 @@
     groups: wheel
     shell: /bin/bash
     create_home: yes
-  no_log: true
+  when: result is not defined 
+  no_log: false
+
+- name: Vérifier que l'utilisateur admin_db a été créé
+  ansible.builtin.getent:
+    database: passwd
+    name: admin_db
+  register: result_user_created
+  failed_when: false
+
+- name: Autoriser les membres du groupe wheel à utiliser sudo
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    regexp: '^# %wheel'
+    line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+    validate: '/usr/sbin/visudo -cf %s'
 
 - name: Autoriser l’authentification par mot de passe SSH
   ansible.builtin.lineinfile:
@@ -37,5 +59,6 @@
   
 - name: Activer la persistance (linger) pour admin_db
   ansible.builtin.command: "loginctl enable-linger admin_db"
+  failed_when: false
   args:
     creates: /var/lib/systemd/linger/admin_db

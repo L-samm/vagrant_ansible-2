@@ -1,46 +1,138 @@
+- name: Activer linger pour admin_db
+  ansible.builtin.command: loginctl enable-linger admin_db
+  args:
+    creates: /var/lib/systemd/linger/admin_db
+
+- name: Créer la configuration DNS pour Docker rootless
+  become: true
+  become_user: admin_db
+  ansible.builtin.file:
+    path: "/home/admin_db/.config/docker"
+    state: directory
+    mode: "0755"
+
+- name: Définir le DNS de Docker rootless
+  become: true
+  become_user: admin_db
+  ansible.builtin.copy:
+    dest: "/home/admin_db/.config/docker/daemon.json"
+    content: |
+      {
+        "dns": ["8.8.8.8", "1.1.1.1"]
+      }
+    mode: "0644"
+
+- name: Activer le démarrage automatique du service rootless Docker
+  become: true
+  become_user: admin_db
+  ansible.builtin.command: systemctl --user enable docker.service
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ admin_db_uid.stdout | default('1001') }}"
+
+- name: Démarrer le service rootless Docker pour admin_db
+  ansible.builtin.systemd:
+    name: docker.service
+    scope: user
+    state: started
+    enabled: yes
+  become: true
+  become_user: admin_db
+
+- name: Redémarrer le service rootless Docker pour appliquer le DNS
+  ansible.builtin.systemd:
+    name: docker.service
+    scope: user
+    state: restarted
+  become: true
+  become_user: admin_db
+
 - name: Récupérer l'UID de admin_db
   ansible.builtin.command: id -u admin_db
   register: admin_db_uid
   changed_when: false
 
+- name: Debug admin_db_uid
+  debug:
+    var: admin_db_uid.stdout
+
 - name: Copier le code app dans la VM
   ansible.builtin.synchronize:
     src: "{{ playbook_dir }}/../app/"
-    dest: "/home/{{ docker_user }}/app"
+    dest: "/home/admin_db/app"
     recursive: yes
   become: true
-  become_user: "{{ docker_user }}"
+  become_user: "admin_db"
 
 - name: Générer le fichier .env pour Laravel
   ansible.builtin.template:
     src: "templates/env.j2"
-    dest: "/home/{{ docker_user }}/app/.env"
-    owner: "{{ docker_user }}"
-    group: "{{ docker_user }}"
+    dest: "/home/admin_db/app/.env"
+    owner: "admin_db"
+    group: "admin_db"
     mode: "0644"
   when: inventory_hostname == 'vm1'
 
+- name: Builder les images Docker
+  become: true
+  become_user: admin_db
+  ansible.builtin.command: >
+    /home/admin_db/bin/docker --host unix:///run/user/{{ admin_db_uid.stdout }}/docker.sock
+    compose -f /home/admin_db/app/docker-compose.yaml build
+  async: 600
+  poll: 10
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ admin_db_uid.stdout }}"
+    DOCKER_BUILDKIT: "0"
+  register: docker_build_result
+
 - name: Déployer l'app et la db via docker_compose
   become: true
-  become_user: "{{ docker_user }}"
+  become_user: admin_db
   community.docker.docker_compose_v2:
-    project_src: "/home/{{ docker_user }}/app"
+    project_src: "/home/admin_db/app"
     files:
       - docker-compose.yaml
-    state: restarted
-    build: always
-    docker_cli: "/home/{{ docker_user }}/bin/docker"
+    state: present
+    recreate: auto
+    remove_orphans: true
+    docker_cli: "/home/admin_db/bin/docker"
     docker_host: "unix:///run/user/{{ admin_db_uid.stdout }}/docker.sock"
+  environment:
+    DOCKER_BUILDKIT: "0"
+    XDG_RUNTIME_DIR: "/run/user/{{ admin_db_uid.stdout }}"
+  register: docker_compose_result
   when: inventory_hostname == 'vm1'
 
 - name: Vérifier que le container master est en ligne
   community.docker.docker_container_info:
-    name: db
+    name: app-db-1
     docker_host: "unix:///run/user/{{ admin_db_uid.stdout }}/docker.sock"
-  register: master_info
+  register: db_info
+  until: db_info.container.State.Health.Status == "healthy"
+  retries: 10
+  delay: 5
   when: inventory_hostname == 'vm1'
 
-- name: Debug info master
+- name: Wait for MySQL to be ready
+  wait_for:
+    host: "{{ ansible_host }}"
+    port: 3306
+    delay: 10
+    timeout: 60
+
+- name: Lancer les migrations Laravel
+  become: true
+  become_user: admin_db
+  ansible.builtin.command: >
+    /home/admin_db/bin/docker --host unix:///run/user/{{ admin_db_uid.stdout }}/docker.sock
+    compose -f /home/admin_db/app/docker-compose.yaml run --rm app php artisan migrate --force
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ admin_db_uid.stdout }}"
+  args:
+    chdir: /home/admin_db/app
+  when: inventory_hostname == 'vm1'
+
+- name: Debug etat DB
   debug:
-    var: master_info
+    msg: "Le conteneur DB est {{ db_info.container.State.Health.Status }}"
   when: inventory_hostname == 'vm1'

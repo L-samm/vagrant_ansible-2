@@ -8,6 +8,6 @@
       vars:
         docker_user_bashrc: true
     - role: setup_app
-    - role: monitoring # Mettre en place la vm avec l'app et la db
+    - role: traefik
     - role: backup
     - role: monitoring

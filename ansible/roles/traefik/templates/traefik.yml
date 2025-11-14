@@ -5,7 +5,9 @@ global:
 entryPoints:
   web:
     address: ":80"
-  service:
+  websecure:
+    address: ":443"
+  monitoring:
     address: ":3000"
 
 providers:
@@ -31,12 +33,12 @@ http:
     app:
       entryPoints:
         - web
-      rule: Host(`laravel.local`)
-      service: laravel
+      rule: Host(`app.local`)
+      service: app
 
-    service:
+    monitoring:
       entryPoints:
-        - service
+        - monitoring
       rule: Host(`grafana.local`)
       service: grafana
 
@@ -45,7 +47,7 @@ http:
     laravel:
       loadBalancer:
         servers:
-          - url: http://laravel:80/
+          - url: http://app:80/
         passHostHeader: true
 
     grafana:

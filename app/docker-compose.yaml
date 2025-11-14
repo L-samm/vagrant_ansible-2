@@ -1,7 +1,10 @@
 services:
   traefik:
-    image: "traefik:v3.0"
+    # image: "traefik:v3.0"
+    build: ../traefik
+    container_name: traefik
     command:
+      - "--configFile=/traefik.yml"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
@@ -9,12 +12,19 @@ services:
       - "--metrics.prometheus=true"
       - "--metrics.prometheus.entryPoint=metrics"
     ports:
-      - "8082:80"
+      - "8088:80"
+      - "8443:443"
+      - "3000:3000"
+      - "8080:8080"
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    - "${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock:ro"
+
     #labels:
       #- "traefik.enable=true"
       #- "traefik.http.routers.app.rule=Host(`yourdomain.com`)"
+    networks:
+    - app_network
+
   app:
     # set container name app
     container_name: app
@@ -37,7 +47,9 @@ services:
       - db
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=HostRegexp(`.*`)"
+      - "traefik.http.routers.app.rule=HostRegexp(`app.local`)"
+    networks:
+      - app_network
   db:
     image: mysql:8.0
     restart: unless-stopped
@@ -59,5 +71,11 @@ services:
       retries: 3
       start_period: 30s
       timeout: 10s
+    networks:
+      - app_network
 volumes:
   db_data:
+
+networks:
+  app_network:
+    driver: bridge

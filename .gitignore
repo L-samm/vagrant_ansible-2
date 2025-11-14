@@ -1,1 +1,2 @@
-.vagrant
+.vagrant.vscode/
+ansible/test_in.ini

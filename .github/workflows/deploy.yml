@@ -46,10 +46,10 @@ jobs:
       id: terraform
       working-directory: infra
       env:
-        SUBSCRIPTION_ID: ${{ secrets.SUBSCRIPTION_ID }}
-        CLIENT_ID: ${{ secrets.CLIENT_ID }}
-        CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-        TENANT_ID: ${{ secrets.TENANT_ID }}
+        ARM_SUBSCRIPTION_ID: ${{ secrets.SUBSCRIPTION_ID }}
+        ARM_CLIENT_ID:       ${{ secrets.CLIENT_ID }}
+        ARM_CLIENT_SECRET:   ${{ secrets.CLIENT_SECRET }}
+        ARM_TENANT_ID:       ${{ secrets.TENANT_ID }}
       run: |
         terraform init -backend-config=envs/${{ env.ENV_NAME }}/backend.tf
         terraform apply -auto-approve -var-file="envs/${{ env.ENV_NAME }}/terraform.tfvars"

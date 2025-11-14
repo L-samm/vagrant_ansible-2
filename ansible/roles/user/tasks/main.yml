@@ -17,7 +17,7 @@
     groups: wheel
     shell: /bin/bash
     create_home: yes
-  when: result is not defined 
+  when: result is not defined
   no_log: false
 
 - name: Vérifier que l'utilisateur admin_db a été créé
@@ -34,16 +34,10 @@
     line: '%wheel ALL=(ALL) NOPASSWD: ALL'
     validate: '/usr/sbin/visudo -cf %s'
 
-- name: S'assurer que SSH est actif et lancé
-  ansible.builtin.service:
-    name: sshd
-    state: started
-    enabled: yes
-
 - name: Vérifie le chemin de l'interpréteur Python utilisé par Ansible
   ansible.builtin.debug:
     var: ansible_python_interpreter
-  
+
 - name: Activer la persistance (linger) pour admin_db
   ansible.builtin.command: "loginctl enable-linger admin_db"
   failed_when: false

@@ -4,3 +4,5 @@
 *.secret.tfvars
 *.lock.hcl
 *.tfstate
+.vagrant.vscode/
+ansible/test_in.ini

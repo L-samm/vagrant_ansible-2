@@ -55,13 +55,25 @@
   debug:
     var: admin_db_uid.stdout
 
+
+# - name: Copier le code app dans la VM
+#   ansible.builtin.synchronize:
+#     src: "{{ playbook_dir }}/../app/"
+#     dest: "/home/admin_db/app"
+#     recursive: yes
+#     rsync_path: "rsync"
+#   become: true
+#   become_user: "admin_db"
+
 - name: Copier le code app dans la VM
-  ansible.builtin.synchronize:
+  ansible.builtin.copy:
     src: "{{ playbook_dir }}/../app/"
-    dest: "/home/admin_db/app"
-    recursive: yes
-  become: true
-  become_user: "admin_db"
+    dest: "/home/admin_db/app/"
+    owner: admin_db
+    group: admin_db
+    mode: '0755'
+  become: yes
+
 
 - name: Générer le fichier .env pour Laravel
   ansible.builtin.template:

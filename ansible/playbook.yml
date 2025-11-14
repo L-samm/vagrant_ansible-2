@@ -1,13 +1,13 @@
 - name: Automatisation configuration mysql dans la vm
   hosts: vms
   become: true
-  
+
   roles:
     - role: user
     - role: konstruktoid.docker_rootless
       vars:
         docker_user_bashrc: true
-    #- role: traefik
+    - role: traefik
     - role: setup_app
     - role: backup
-    - role: monitoring
+    #- role: monitoring

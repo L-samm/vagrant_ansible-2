@@ -55,6 +55,27 @@
   debug:
     var: admin_db_uid.stdout
 
+- name: Remove old docker image if it exists
+  docker_image:
+      source: local
+      name: traefik_ms_build
+      tag: latest
+      force_absent: true
+  ignore_errors: yes
+  environment:
+    DOCKER_HOST: "unix:///run/user/{{ admin_db_uid.stdout | default('1001') }}/docker.sock"
+
+- name: Build Docker image
+  community.docker.docker_image:
+    name: traefik_ms_build
+    tag: latest
+    state: present
+    build:
+      dockerfile: Dockerfile
+      path: /home/admin_db/traefik/
+    source: build
+  environment:
+     DOCKER_HOST: "unix:///run/user/{{ admin_db_uid.stdout | default('1001') }}/docker.sock"
 
 # - name: Copier le code app dans la VM
 #   ansible.builtin.synchronize:

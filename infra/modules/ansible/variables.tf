@@ -12,5 +12,4 @@ variable "admin_username" {
 variable "ssh_key_path" {
   description = "Chemin vers la clé privée SSH"
   type        = string
-  default     = "~/.ssh/id_rsa"
 }

@@ -14,6 +14,13 @@ jobs:
     permissions:
       contents: 'read'
       id-token: 'write'
+      
+    env:
+      # Ces variables seront remplies APRÈS extraction
+      ARM_CLIENT_ID: ""
+      ARM_CLIENT_SECRET: ""
+      ARM_SUBSCRIPTION_ID: ""
+      ARM_TENANT_ID: ""
 
     steps:
     - name: Checkout code
@@ -42,39 +49,34 @@ jobs:
     - name: Extract Azure credentials for Terraform
       id: azure-creds
       run: |
-        AZURE_CREDS='${{ secrets.AZURE_CREDENTIALS }}'
-        CLIENT_ID=$(echo $AZURE_CREDS | jq -r '.clientId')
-        CLIENT_SECRET=$(echo $AZURE_CREDS | jq -r '.clientSecret')
-        SUBSCRIPTION_ID=$(echo $AZURE_CREDS | jq -r '.subscriptionId')
-        TENANT_ID=$(echo $AZURE_CREDS | jq -r '.tenantId')
-        
+        CREDS='${{ secrets.AZURE_CREDENTIALS }}'
+        CLIENT_ID=$(echo $CREDS | jq -r '.clientId')
+        CLIENT_SECRET=$(echo $CREDS | jq -r '.clientSecret')
+        SUBSCRIPTION_ID=$(echo $CREDS | jq -r '.subscriptionId')
+        TENANT_ID=$(echo $CREDS | jq -r '.tenantId')
+
         echo "::add-mask::$CLIENT_SECRET"
-        echo "client_id=$CLIENT_ID" >> $GITHUB_OUTPUT
-        echo "client_secret=$CLIENT_SECRET" >> $GITHUB_OUTPUT
-        echo "subscription_id=$SUBSCRIPTION_ID" >> $GITHUB_OUTPUT
-        echo "tenant_id=$TENANT_ID" >> $GITHUB_OUTPUT
+
+        echo "ARM_CLIENT_ID=$CLIENT_ID" >> $GITHUB_ENV
+        echo "ARM_CLIENT_SECRET=$CLIENT_SECRET" >> $GITHUB_ENV
+        echo "ARM_SUBSCRIPTION_ID=$SUBSCRIPTION_ID" >> $GITHUB_ENV
+        echo "ARM_TENANT_ID=$TENANT_ID" >> $GITHUB_ENV
+    
+    - name: Generate SSH key
+      run: |
+        ssh-keygen -t rsa -b 4096 -f id_rsa -N ""
+        echo "TF_VAR_ssh_public_key=$(cat id_rsa.pub)" >> $GITHUB_ENV
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.9.8
         terraform_wrapper: false
-      env:
-        ARM_CLIENT_ID: ${{ steps.azure-creds.outputs.client_id }}
-        ARM_CLIENT_SECRET: ${{ steps.azure-creds.outputs.client_secret }}
-        ARM_SUBSCRIPTION_ID: ${{ steps.azure-creds.outputs.subscription_id }}
-        ARM_TENANT_ID: ${{ steps.azure-creds.outputs.tenant_id }}
 
-    
     # Le terraform s'occupe de crée les ressources et executer le ansible
     - name: Déploiement de l'infrastructure (Terraform)
       id: terraform
       working-directory: infra
-      env:
-        ARM_CLIENT_ID: ${{ steps.azure-creds.outputs.client_id }}
-        ARM_CLIENT_SECRET: ${{ steps.azure-creds.outputs.client_secret }}
-        ARM_SUBSCRIPTION_ID: ${{ steps.azure-creds.outputs.subscription_id }}
-        ARM_TENANT_ID: ${{ steps.azure-creds.outputs.tenant_id }}
       run: |
         terraform init
         terraform apply -auto-approve -var-file="envs/${{ env.ENV_NAME }}/terraform.tfvars"

@@ -78,5 +78,5 @@ jobs:
       id: terraform
       working-directory: infra
       run: |
-        terraform init
+        terraform init -backend-config=envs/${{ env.ENV_NAME }}/backend.tf
         terraform apply -auto-approve -var-file="envs/${{ env.ENV_NAME }}/terraform.tfvars"

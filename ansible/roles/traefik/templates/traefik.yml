@@ -39,21 +39,21 @@ http:
     monitoring:
       entryPoints:
         - monitoring
-      rule: Host(`grafana.local`)
-      service: grafana
+      rule: Host(`netdata.local`)
+      service: netdata
 
 
   services:
-    laravel:
+    app:
       loadBalancer:
         servers:
           - url: http://app:80/
         passHostHeader: true
 
-    grafana:
+    netdata:
       loadBalancer:
         servers:
-          - url: http://grafana:3000/
+          - url: http://netdata:19999/
         passHostHeader: true
 
 

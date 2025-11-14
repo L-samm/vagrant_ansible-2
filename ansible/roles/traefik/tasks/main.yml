@@ -19,20 +19,3 @@
     dest: /home/admin_db/traefik/Dockerfile
     mode: "0644"
 
-- name: Remove old docker image if it exists
-  docker_image:
-      source: local
-      name: traefik_ms_build
-      tag: latest
-      force_absent: true
-  ignore_errors: yes
-
-- name: Build Docker image
-  community.docker.docker_image:
-    name: traefik_ms_build
-    tag: latest
-    state: present
-    build:
-      dockerfile: Dockerfile
-      path: /home/admin_db/traefik/
-    source: build

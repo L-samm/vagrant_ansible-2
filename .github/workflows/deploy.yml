@@ -25,8 +25,6 @@ jobs:
       run: |
         if [[ "$GITHUB_REF" == "refs/heads/dev" ]]; then
           echo "ENV_NAME=dev" >> $GITHUB_ENV
-        elif [[ "$GITHUB_REF" == "refs/heads/ansible" ]]; then
-          echo "ENV_NAME=dev" >> $GITHUB_ENV
         elif [[ "$GITHUB_REF" == "refs/heads/stg" ]]; then
           echo "ENV_NAME=stg" >> $GITHUB_ENV
         elif [[ "$GITHUB_REF" == "refs/heads/main" ]]; then

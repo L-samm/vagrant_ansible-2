@@ -33,17 +33,37 @@ jobs:
           echo "Branche non gérée"
           exit 1
         fi
+    
+    - name: Azure CLI Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Installation de Terraform
+    - name: Extract Azure credentials for Terraform
+      id: azure-creds
+      run: |
+        AZURE_CREDS='${{ secrets.AZURE_CREDENTIALS }}'
+        CLIENT_ID=$(echo $AZURE_CREDS | jq -r '.clientId')
+        CLIENT_SECRET=$(echo $AZURE_CREDS | jq -r '.clientSecret')
+        SUBSCRIPTION_ID=$(echo $AZURE_CREDS | jq -r '.subscriptionId')
+        TENANT_ID=$(echo $AZURE_CREDS | jq -r '.tenantId')
+        
+        echo "::add-mask::$CLIENT_SECRET"
+        echo "client_id=$CLIENT_ID" >> $GITHUB_OUTPUT
+        echo "client_secret=$CLIENT_SECRET" >> $GITHUB_OUTPUT
+        echo "subscription_id=$SUBSCRIPTION_ID" >> $GITHUB_OUTPUT
+        echo "tenant_id=$TENANT_ID" >> $GITHUB_OUTPUT
+
+    - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.9.8
         terraform_wrapper: false
       env:
-        ARM_SUBSCRIPTION_ID: ${{ secrets.SUBSCRIPTION_ID }}
-        ARM_CLIENT_ID:       ${{ secrets.CLIENT_ID }}
-        ARM_CLIENT_SECRET:   ${{ secrets.CLIENT_SECRET }}
-        ARM_TENANT_ID:       ${{ secrets.TENANT_ID }}
+        ARM_CLIENT_ID: ${{ steps.azure-creds.outputs.client_id }}
+        ARM_CLIENT_SECRET: ${{ steps.azure-creds.outputs.client_secret }}
+        ARM_SUBSCRIPTION_ID: ${{ steps.azure-creds.outputs.subscription_id }}
+        ARM_TENANT_ID: ${{ steps.azure-creds.outputs.tenant_id }}
 
     
     # Le terraform s'occupe de crée les ressources et executer le ansible
@@ -51,10 +71,10 @@ jobs:
       id: terraform
       working-directory: infra
       env:
-        ARM_SUBSCRIPTION_ID: ${{ secrets.SUBSCRIPTION_ID }}
-        ARM_CLIENT_ID:       ${{ secrets.CLIENT_ID }}
-        ARM_CLIENT_SECRET:   ${{ secrets.CLIENT_SECRET }}
-        ARM_TENANT_ID:       ${{ secrets.TENANT_ID }}
+        ARM_CLIENT_ID: ${{ steps.azure-creds.outputs.client_id }}
+        ARM_CLIENT_SECRET: ${{ steps.azure-creds.outputs.client_secret }}
+        ARM_SUBSCRIPTION_ID: ${{ steps.azure-creds.outputs.subscription_id }}
+        ARM_TENANT_ID: ${{ steps.azure-creds.outputs.tenant_id }}
       run: |
         terraform init
         terraform apply -auto-approve -var-file="envs/${{ env.ENV_NAME }}/terraform.tfvars"

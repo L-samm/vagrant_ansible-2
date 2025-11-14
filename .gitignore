@@ -1,2 +1,6 @@
 .vagrant
 .env
+.terraform
+*.secret.tfvars
+*.lock.hcl
+*.tfstate

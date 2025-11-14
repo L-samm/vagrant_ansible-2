@@ -7,7 +7,7 @@
     - role: konstruktoid.docker_rootless
       vars:
         docker_user_bashrc: true
-    - role: setup_app
     #- role: traefik
+    - role: setup_app
     - role: backup
     - role: monitoring

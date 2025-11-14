@@ -1,0 +1,7 @@
+resource_group_name  = "rg-stg_10"
+location             = "westeurope"
+storage_account_name = "tfstatebackendsammuel2"
+acr_name             = "acrstg10123"
+vm_name              = "vm-stg"
+admin_username       = "azureuser"
+ssh_public_key_path  = "~/.ssh/id_ed25519.pub"

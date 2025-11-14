@@ -23,6 +23,6 @@ variable "admin_username" {
     default = "azureuser"
 }
 
-variable "ssh_public_key_path" { 
+variable "ssh_public_key" { 
     type = string
 }

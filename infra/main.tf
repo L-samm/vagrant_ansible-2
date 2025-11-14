@@ -24,12 +24,12 @@ module "vm" {
   resource_group_name  = data.azurerm_resource_group.existing.name
   location             = data.azurerm_resource_group.existing.location
   admin_username       = var.admin_username
-  ssh_public_key_path  = var.ssh_public_key_path
+  ssh_public_key       = var.ssh_public_key
 }
 
 # Mettre en place l'infra sur la vm
 module "ansible" {
   source = "./modules/ansible"
   ip_vm = module.vm.ip_vm
-  ssh_key_path = var.ssh_public_key_path
+  ssh_key_path = var.ssh_public_key
 }

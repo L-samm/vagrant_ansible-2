@@ -65,7 +65,7 @@ jobs:
     - name: Generate SSH key
       run: |
         ssh-keygen -t rsa -b 4096 -f id_rsa -N ""
-        echo "TF_VAR_ssh_public_key_path=$(cat id_rsa.pub)" >> $GITHUB_ENV
+        echo "TF_VAR_ssh_public_key=$(cat id_rsa.pub)" >> $GITHUB_ENV
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3

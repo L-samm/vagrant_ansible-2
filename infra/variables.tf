@@ -1,6 +1,5 @@
 variable "resource_group_name" { 
     type = string
-    default = "rg-stg_10"
 }
 
 variable "storage_account_name" { 
@@ -24,5 +23,9 @@ variable "admin_username" {
 }
 
 variable "ssh_public_key" { 
+    type = string
+}
+
+variable "env_name" {
     type = string
 }

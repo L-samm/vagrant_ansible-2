@@ -9,6 +9,3 @@ variable "vm_size" {
   type    = string
   default = "Standard_B1ls"
 }
-variable "env_name" {
-  type = string
-}

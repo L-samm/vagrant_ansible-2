@@ -1,6 +1,6 @@
 # Réutiliser le Resource Group existant
 data "azurerm_resource_group" "existing" {
-  name = "${var.resource_group_name}-${var.env_name}"
+  name = "${var.resource_group_name}"
 }
 
 # Modules
@@ -21,7 +21,6 @@ module "acr" {
 module "vm" {
   source               = "./modules/vm"
   vm_name              = var.vm_name
-  env_name             = var.env_name
   resource_group_name  = data.azurerm_resource_group.existing.name
   location             = data.azurerm_resource_group.existing.location
   admin_username       = var.admin_username

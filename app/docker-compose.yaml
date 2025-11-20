@@ -1,3 +1,8 @@
+networks:
+  app_network:
+    name: app_network
+    driver: bridge
+
 services:
   traefik:
     # image: "traefik:v3.0"
@@ -7,23 +12,25 @@ services:
       - "--configFile=/traefik.yml"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.metrics.address=:8082"
-      - "--metrics.prometheus=true"
-      - "--metrics.prometheus.entryPoint=metrics"
+      - "--entrypoints.web.address=:8088"
+      - "traefik.docker.network=app_network"
+      # - "--entrypoints.metrics.address=:8082"
+      # - "--metrics.prometheus=true"
+      # - "--metrics.prometheus.entryPoint=metrics"
     ports:
-      - "8088:80"
-      - "8443:443"
+      - "8088:8088"
+      - "8443:8443"
       - "3000:3000"
       - "8080:8080"
     volumes:
-    - "${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock:ro"
+      - "${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock:ro"
+      - "/home/admin_db/traefik/files:/etc/traefik"
 
     #labels:
-      #- "traefik.enable=true"
-      #- "traefik.http.routers.app.rule=Host(`yourdomain.com`)"
+    #- "traefik.enable=true"
+    #- "traefik.http.routers.app.rule=Host(`yourdomain.com`)"
     networks:
-    - app_network
+      - app_network
 
   app:
     # set container name app
@@ -31,8 +38,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "8081:80"
     environment:
       APP_DEBUG: "true"
       APP_ENV: "dev"
@@ -64,18 +69,36 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d  # Permet d'exécuter des scripts SQL initiaux
+      - ./mysql-init:/docker-entrypoint-initdb.d # Permet d'exécuter des scripts SQL initiaux
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-u", "root", "-p$MYSQL_ROOT_PASSWORD"]
+      test:
+        ["CMD", "mysqladmin", "ping", "-u", "root", "-p$MYSQL_ROOT_PASSWORD"]
       interval: 30s
       retries: 3
       start_period: 30s
       timeout: 10s
     networks:
       - app_network
+
+  netdata:
+    image: netdata/netdata:latest
+    container_name: netdata
+    restart: unless-stopped
+    cap_add:
+      - SYS_PTRACE # нужно для некоторых плагинов Netdata
+      - SYS_ADMIN # для сбора статистики c контейнеров
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - "${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock:ro"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.monitoring.rule=Host(`netdata.local`)"
+      - "traefik.http.routers.monitoring.entrypoints=monitoring"
+      - "traefik.http.services.netdata.loadbalancer.server.port=19999"
+    networks:
+      - app_network
+
 volumes:
   db_data:
 
-networks:
-  app_network:
-    driver: bridge

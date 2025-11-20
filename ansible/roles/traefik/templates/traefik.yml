@@ -4,17 +4,29 @@ global:
 
 entryPoints:
   web:
-    address: ":80"
+    address: ":8088"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
   websecure:
-    address: ":443"
+    address: ":8443"
+    http:
+      tls: true
   monitoring:
     address: ":3000"
 
 providers:
+  file:
+    directory: /etc/traefik
+    watch: true
   docker:
     endpoint: "unix:///var/run/docker.sock"
     network: app_network
     watch: true
+
 
 log:
   level: DEBUG
@@ -29,11 +41,19 @@ api:
   insecure: true
 
 http:
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        port: 8443
+        permanent: true
   routers:
     app:
       entryPoints:
         - web
       rule: Host(`app.local`)
+      middlewares:
+        - redirect-to-https
       service: app
 
     monitoring:
@@ -42,6 +62,13 @@ http:
       rule: Host(`netdata.local`)
       service: netdata
 
+    app-secure:
+      entryPoints:
+        - websecure
+      rule: Host(`app.local`)
+      service: app
+      tls:
+        store: default
 
   services:
     app:
@@ -56,11 +83,17 @@ http:
           - url: http://netdata:19999/
         passHostHeader: true
 
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: "/etc/traefik/traefik.crt"
+        keyFile: "/etc/traefik/traefik.key"
 
-certificatesResolvers:
-  letsencrypt:
-    acme:
-      email: you@example.com
-      storage: /acme.json
-      httpChallenge:
-        entryPoint: web
+# certificatesResolvers:
+#   letsencrypt:
+#     acme:
+#       email: you@example.com
+#       storage: /acme.json
+#       httpChallenge:
+#         entryPoint: web

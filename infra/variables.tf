@@ -8,7 +8,6 @@ variable "storage_account_name" {
 
 variable "acr_name" { 
     type = string
-    default = "acrstg10123"
 }
 
 variable "vm_name" { 

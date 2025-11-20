@@ -97,6 +97,7 @@ jobs:
         TF_VAR_ssh_private_key: ${{ env.TF_VAR_ssh_private_key }}
       run: |
         terraform init -backend-config=envs/${{ env.ENV_NAME }}/backend.tfvars
+        terraform force-unlock beb36faf-1583-36c4-bae0-4f7e137565b5
         terraform apply -auto-approve -var-file="envs/${{ env.ENV_NAME }}/terraform.tfvars"
 
     - name: Get VM Public IP

@@ -9,7 +9,6 @@ variable "admin_username" {
   default     = "azureuser"
 }
 
-variable "ssh_key_path" {
-  description = "Chemin vers la clé privée SSH"
+variable "ssh_private_key_base64" {
   type        = string
 }

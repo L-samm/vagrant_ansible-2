@@ -28,3 +28,7 @@ variable "ssh_public_key" {
 variable "env_name" {
     type = string
 }
+
+variable "location" {
+    type = string
+}

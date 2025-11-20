@@ -1,6 +1,6 @@
 # Réutiliser le Resource Group existant
 data "azurerm_resource_group" "existing" {
-  name = "${var.resource_group_name}-${env_name}"
+  name = "${var.resource_group_name}-${var.env_name}"
 }
 
 # Modules

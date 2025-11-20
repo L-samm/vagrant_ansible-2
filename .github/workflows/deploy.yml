@@ -22,6 +22,11 @@ jobs:
     - name: Déterminer l'environnement
       id: set-env
 
+      env:
+        LOCATION: westeurope
+        RESOURCE_GROUP: rg-stg_10
+        STORAGE_ACCOUNT: tfstatebackendsammuel2
+
       run: |
         if [[ "$GITHUB_REF" == "refs/heads/dev" ]]; then
           echo "ENV_NAME=dev" >> $GITHUB_ENV
@@ -61,12 +66,11 @@ jobs:
         echo "::add-mask::$(cat id_rsa)"
         echo "TF_VAR_ssh_public_key=$(cat id_rsa.pub)" >> $GITHUB_ENV
 
-    - name: Create backend container if missing
+    - name: Ensure backend exists
       run: |
-        az storage container create \
-          --account-name tfstatebackendsammuel \
-          --name tfstate \
-          --auth-mode login
+        az group create -n ${{ env.RESOURCE_GROUP }} -l ${{ env.LOCATION }}
+        az storage account create -n ${{ env.STORAGE_ACCOUNT }} -g ${{ env.RESOURCE_GROUP }} -l ${{ env.LOCATION }} --sku Standard_LRS || true
+        az storage container create --account-name ${{ env.STORAGE_ACCOUNT }} --name tfstate --auth-mode login || true
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3

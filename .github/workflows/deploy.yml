@@ -64,7 +64,7 @@ jobs:
     - name: Create backend container if missing
       run: |
         az storage container create \
-          --account-name tfstatebackendsammuel2 \
+          --account-name tfstatebackendsammuel \
           --name tfstate \
           --auth-mode login
 

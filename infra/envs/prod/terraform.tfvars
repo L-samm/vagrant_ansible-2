@@ -1,6 +1,6 @@
 resource_group_name  = "rg-stg_10"
 location             = "westeurope"
-storage_account_name = "tfstatebackendsammuel2"
+storage_account_name = "tfstatebackendsammuel"
 acr_name             = "PROD_acrstg10123"
 vm_name              = "PROD_vm-stg"
 admin_username       = "azureuser"

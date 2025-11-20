@@ -1,2 +1,7 @@
 ---
 # defaults file for traefik
+cert_name: "traefik.crt"
+key_name: "traefik.key"
+common_name: "localhost"
+valid_days: 365
+key_size: 2048

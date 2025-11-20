@@ -60,8 +60,12 @@ jobs:
         ssh-keygen -t rsa -b 4096 -f id_rsa -N ""
         echo "::add-mask::$(cat id_rsa)"
         echo "::add-mask::$(cat id_rsa.pub)"
-        echo "TF_VAR_ssh_public_key=$(cat id_rsa.pub)" >> $GITHUB_ENV
-        echo "TF_VAR_ssh_private_key=$(cat id_rsa)" >> $GITHUB_ENV
+
+        SSH_PRIV_B64=$(base64 -w0 id_rsa)
+        SSH_PUB=$(cat id_rsa.pub)
+
+        echo "TF_VAR_ssh_public_key=$SSH_PUB" >> $GITHUB_ENV
+        echo "TF_VAR_ssh_private_key_base64=$SSH_PRIV_B64" >> $GITHUB_ENV
 
     - name: Ensure backend exists
       env:

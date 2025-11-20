@@ -13,7 +13,7 @@ resource "ansible_playbook" "playbook" {
 
   extra_vars = {
     ansible_host                  = var.ip_vm
-    ansible_user                  = "admi_db"
+    ansible_user                  = "admin_db"
     ansible_ssh_private_key_file  = var.ssh_key_path
   }
 

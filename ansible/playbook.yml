@@ -4,6 +4,7 @@
 
   roles:
     - role: user
+    # - role: config
     - role: konstruktoid.docker_rootless
       vars:
         docker_user_bashrc: true

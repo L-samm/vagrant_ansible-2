@@ -4,12 +4,12 @@ data "azurerm_resource_group" "existing" {
 }
 
 # Modules
-module "storage" {
-  source                = "./modules/storage"
-  storage_account_name  = var.storage_account_name
-  resource_group_name   = data.azurerm_resource_group.existing.name
-  location              = data.azurerm_resource_group.existing.location
-}
+# module "storage" {
+  # source                = "./modules/storage"
+  # storage_account_name  = var.storage_account_name
+  # resource_group_name   = data.azurerm_resource_group.existing.name
+  # location              = data.azurerm_resource_group.existing.location
+# }
 
 module "acr" {
   source              = "./modules/acr"
@@ -20,6 +20,7 @@ module "acr" {
 
 module "vm" {
   source               = "./modules/vm"
+  env_name             = var.env_name
   vm_name              = var.vm_name
   resource_group_name  = data.azurerm_resource_group.existing.name
   location             = data.azurerm_resource_group.existing.location

@@ -27,10 +27,3 @@ module "vm" {
   admin_username       = var.admin_username
   ssh_public_key       = var.ssh_public_key
 }
-
-# Mettre en place l'infra sur la vm
-module "ansible" {
-  source = "./modules/ansible"
-  ip_vm = module.vm.public_ip_vm
-  ssh_key_path = var.ssh_public_key
-}

@@ -68,7 +68,6 @@ jobs:
 
     - name: Ensure backend exists
       run: |
-        az group create -n ${{ env.RESOURCE_GROUP }} -l ${{ env.LOCATION }}
         az storage account create -n ${{ env.STORAGE_ACCOUNT }} -g ${{ env.RESOURCE_GROUP }} -l ${{ env.LOCATION }} --sku Standard_LRS || true
         az storage container create --account-name ${{ env.STORAGE_ACCOUNT }} --name tfstate --auth-mode login || true
 

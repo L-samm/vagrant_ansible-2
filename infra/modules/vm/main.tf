@@ -13,7 +13,7 @@ resource "azurerm_subnet" "subnet" {
 }
 
 resource "azurerm_network_interface" "nic" {
-  name                = "nic-${var.vm_name}"
+  name                = "nic-${var.vm_name}-${var.env_name}"
   location            = var.location
   resource_group_name = var.resource_group_name
 

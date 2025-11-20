@@ -25,7 +25,7 @@ resource "azurerm_network_interface" "nic" {
 }
 
 resource "azurerm_linux_virtual_machine" "vm" {
-  name                = var.vm_name
+  name                = "${var.vm_name}-${var.env_name}"
   resource_group_name = var.resource_group_name
   location            = var.location
   size                = var.vm_size

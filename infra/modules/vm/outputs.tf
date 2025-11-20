@@ -6,3 +6,7 @@ output "vm_id" {
 output "ip_vm" {
   value = azurerm_network_interface.nic.private_ip_address
 }
+
+output "public_ip_vm" {
+  value = azurerm_public_ip.vm_public_ip.ip_address
+}

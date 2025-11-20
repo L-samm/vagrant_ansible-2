@@ -57,9 +57,8 @@ jobs:
     
     - name: Generate SSH key
       run: |
-        ssh-keygen -t rsa -b 4096 -f id_rsa -N ""
+        ssh-keygen -t rsa -b 4096 -f ~/.ssh/vm_key
         echo "::add-mask::$(cat id_rsa)"
-        echo "$(cat id_rsa)"
         echo "TF_VAR_ssh_public_key=$(cat id_rsa.pub)" >> $GITHUB_ENV
 
     - name: Ensure backend exists
@@ -93,3 +92,20 @@ jobs:
       run: |
         terraform init -backend-config=envs/${{ env.ENV_NAME }}/backend.tfvars
         terraform apply -auto-approve -var-file="envs/${{ env.ENV_NAME }}/terraform.tfvars"
+
+    - name: Get VM Public IP
+      id: get_public_ip
+      working-directory: infra
+      env:
+        ARM_CLIENT_ID:       ${{ env.ARM_CLIENT_ID }}
+        ARM_CLIENT_SECRET:   ${{ env.ARM_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ env.ARM_SUBSCRIPTION_ID }}
+        ARM_TENANT_ID:       ${{ env.ARM_TENANT_ID }}
+
+        TF_VAR_env_name: ${{ env.ENV_NAME }}
+        TF_VAR_ssh_public_key:  ${{ env.TF_VAR_ssh_public_key }}
+        TF_VAR_ssh_private_key: ${{ env.TF_VAR_ssh_private_key }}
+      run: |
+        PUBLIC_IP=$(terraform output -raw public_ip_vm)
+        echo "VM Public IP: $PUBLIC_IP"
+        echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT

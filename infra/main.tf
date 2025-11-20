@@ -31,6 +31,6 @@ module "vm" {
 # Mettre en place l'infra sur la vm
 module "ansible" {
   source = "./modules/ansible"
-  ip_vm = module.vm.ip_vm
+  ip_vm = module.vm.public_ip_vm
   ssh_key_path = var.ssh_public_key
 }

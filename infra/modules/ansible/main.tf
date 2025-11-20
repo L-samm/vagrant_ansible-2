@@ -8,7 +8,7 @@ terraform {
 }
 
 resource "ansible_playbook" "playbook" {
-  playbook   = "${path.module}/../playbook.yml"
+  playbook   = "${path.root}/ansible/playbook.yml"
   name       = "vm"
 
   extra_vars = {

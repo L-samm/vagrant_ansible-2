@@ -1,0 +1,33 @@
+---
+- name: Ensure swap file directory exists
+  ansible.builtin.file:
+    path: /swap
+    state: directory
+    mode: '0755'
+
+- name: Create 8GB swap file
+  ansible.builtin.command: "fallocate -l 8G /swap/swapfile"
+  args:
+    creates: /swap/swapfile
+
+- name: Set correct permissions for swap file
+  ansible.builtin.file:
+    path: /swap/swapfile
+    mode: '0600'
+
+- name: Format swap file
+  ansible.builtin.command: "mkswap /swap/swapfile"
+  args:
+    creates: /dev/mapper/swap
+
+- name: Enable swap file
+  ansible.builtin.command: "swapon /swap/swapfile"
+  args:
+    creates: /proc/swaps
+
+- name: Add swap entry to /etc/fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    line: '/swap/swapfile none swap sw 0 0'
+    create: true
+    state: present

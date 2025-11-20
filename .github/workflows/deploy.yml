@@ -61,6 +61,13 @@ jobs:
         echo "::add-mask::$(cat id_rsa)"
         echo "TF_VAR_ssh_public_key=$(cat id_rsa.pub)" >> $GITHUB_ENV
 
+    - name: Create backend container if missing
+      run: |
+        az storage container create \
+          --account-name tfstatebackendsammuel2 \
+          --name tfstate \
+          --auth-mode login
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:

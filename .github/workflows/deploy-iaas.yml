@@ -71,7 +71,9 @@ jobs:
 
     - name: Clean Terraform state for VM
       working-directory: infra
-      run: terraform state rm module.vm.azurerm_linux_virtual_machine.vm || true
+      run: |
+        terraform init -backend-config=envs/${{ env.ENV_NAME }}/backend.tfvars
+        terraform state rm module.vm.azurerm_linux_virtual_machine.vm || true
 
     # Le terraform s'occupe de crée les ressources et executer le ansible
     - name: Déploiement de l'infrastructure (Terraform)
@@ -87,7 +89,6 @@ jobs:
         TF_VAR_ssh_public_key:  ${{ env.TF_VAR_ssh_public_key }}
       run: |
         terraform init -backend-config=envs/${{ env.ENV_NAME }}/backend.tfvars
-        terraform import -var-file="envs/${{ env.ENV_NAME }}/terraform.tfvars" module.vm.azurerm_linux_virtual_machine.vm /subscriptions/6b9318b1-2215-418a-b0fd-ba0832e9b333/resourceGroups/rg-stg_10/providers/Microsoft.Compute/virtualMachines/vm-stg-${{ env.ENV_NAME }}
         terraform apply -auto-approve -var-file="envs/${{ env.ENV_NAME }}/terraform.tfvars"
 
     - name: Get VM Public IP

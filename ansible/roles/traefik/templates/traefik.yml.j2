@@ -1,0 +1,23 @@
+http:
+  routers:
+    app:
+      entryPoints:
+        - web
+      rule: Host(`{{ app_host }}`)
+      middlewares:
+        - redirect-to-https
+      service: app
+
+    monitoring:
+      entryPoints:
+        - monitoring
+      rule: Host(`{{ monitoring_host }}`)
+      service: netdata
+
+    app-secure:
+      entryPoints:
+        - websecure
+      rule: Host(`{{ app_host }}`)
+      service: app
+      tls:
+        store: default

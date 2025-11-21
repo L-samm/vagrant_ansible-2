@@ -77,15 +77,6 @@
   environment:
      DOCKER_HOST: "unix:///run/user/{{ admin_db_uid.stdout | default('1001') }}/docker.sock"
 
-# - name: Copier le code app dans la VM
-#   ansible.builtin.synchronize:
-#     src: "{{ playbook_dir }}/../app/"
-#     dest: "/home/admin_db/app"
-#     recursive: yes
-#     rsync_path: "rsync"
-#   become: true
-#   become_user: "admin_db"
-
 - name: Copier le code app dans la VM
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../app/"
@@ -95,7 +86,6 @@
     mode: '0755'
   become: yes
 
-
 - name: Générer le fichier .env pour Laravel
   ansible.builtin.template:
     src: "templates/env.j2"
@@ -103,6 +93,9 @@
     owner: "admin_db"
     group: "admin_db"
     mode: "0644"
+  vars:
+    APP_HOST: "{{ vm_ip }}"
+    MONITORING_HOST: "{{ vm_ip }}"
   when: inventory_hostname == 'vm1'
 
 - name: Builder les images Docker

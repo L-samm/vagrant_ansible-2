@@ -52,7 +52,7 @@ services:
       - db
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=HostRegexp(`app.local`)"
+      - "traefik.http.routers.app.rule=HostRegexp(${APP_HOST})"
     networks:
       - app_network
   db:
@@ -93,7 +93,7 @@ services:
       - "${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock:ro"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.monitoring.rule=Host(`netdata.local`)"
+      - "traefik.http.routers.monitoring.rule=Host(${MONITORING_HOST})"
       - "traefik.http.routers.monitoring.entrypoints=monitoring"
       - "traefik.http.services.netdata.loadbalancer.server.port=19999"
     networks:

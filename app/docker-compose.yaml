@@ -5,30 +5,18 @@ networks:
 
 services:
   traefik:
-    # image: "traefik:v3.0"
-    build: ../traefik
-    container_name: traefik
+    image: "traefik:v3.0"
     command:
-      - "--configFile=/traefik.yml"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:8088"
-      - "traefik.docker.network=app_network"
-      # - "--entrypoints.metrics.address=:8082"
-      # - "--metrics.prometheus=true"
-      # - "--metrics.prometheus.entryPoint=metrics"
+      - "--entrypoints.monitor.address=:19999"
+      - "--providers.docker.network=app_network"
     ports:
-      - "8088:8088"
-      - "8443:8443"
-      - "3000:3000"
-      - "8080:8080"
+      - "8088:8088" # Web (HTTP)
+      - "8080:8080" # Dashboard
     volumes:
       - "${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock:ro"
-      - "/home/admin_db/traefik/files:/etc/traefik"
-
-    #labels:
-    #- "traefik.enable=true"
-    #- "traefik.http.routers.app.rule=Host(`yourdomain.com`)"
     networks:
       - app_network
 
@@ -52,7 +40,9 @@ services:
       - db
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=HostRegexp(${APP_HOST-192.168.56.11})"
+      - "traefik.http.routers.app.entrypoints=web"
+      - "traefik.http.routers.app.rule=HostRegexp(`{host:.+}`)"
+      - "traefik.http.services.app.loadbalancer.server.port=80"
     networks:
       - app_network
   db:
@@ -93,8 +83,8 @@ services:
       - "${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock:ro"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.monitoring.rule=Host(${MONITORING_HOST-192.168.56.11})"
-      - "traefik.http.routers.monitoring.entrypoints=monitoring"
+      - "traefik.http.routers.monitoring.entrypoints=monitor"
+      - "traefik.http.routers.monitoring.rule=HostRegexp(`{host:.+}`)"
       - "traefik.http.services.netdata.loadbalancer.server.port=19999"
     networks:
       - app_network

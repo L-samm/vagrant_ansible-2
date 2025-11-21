@@ -4,3 +4,4 @@
 *.secret.tfvars
 *.lock.hcl
 *.tfstate
+docker-compose.*.yaml

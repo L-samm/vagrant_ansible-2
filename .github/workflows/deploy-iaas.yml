@@ -97,7 +97,7 @@ jobs:
         TF_VAR_ssh_private_key: ${{ env.TF_VAR_ssh_private_key }}
       run: |
         terraform init -backend-config=envs/${{ env.ENV_NAME }}/backend.tfvars
-        terraform import -var-file="envs/${{ env.ENV_NAME }}/terraform.tfvars" module.vm.azurerm_linux_virtual_machine.vm /subscriptions/6b9318b1-2215-418a-b0fd-ba0832e9b333/resourceGroups/rg-stg_10/providers/Microsoft.Compute/virtualMachines/vm-stg-dev
+        terraform import -var-file="envs/${{ env.ENV_NAME }}/terraform.tfvars" module.vm.azurerm_linux_virtual_machine.vm /subscriptions/6b9318b1-2215-418a-b0fd-ba0832e9b333/resourceGroups/rg-stg_10/providers/Microsoft.Compute/virtualMachines/vm-stg-${{ env.ENV_NAME }}
         terraform apply -auto-approve -var-file="envs/${{ env.ENV_NAME }}/terraform.tfvars"
 
     - name: Get VM Public IP
@@ -125,14 +125,43 @@ jobs:
     - name: Install Ansible
       run: pip install ansible
 
+    - name: Generate SSH key in Azure
+      id: sshkey
+      env:
+        LOCATION: westeurope
+        RESOURCE_GROUP: rg-stg_10
+      run: |
+        az sshkey create \
+          --name sshkey-${{ env.ENV_NAME }} \
+          --resource-group $RESOURCE_GROUP \
+          --location $LOCATION \
+          --only-show-errors
+
+        PUB_KEY=$(az sshkey show \
+          --name sshkey-${{ env.ENV_NAME }} \
+          --resource-group $RESOURCE_GROUP \
+          --query publicKey -o tsv)
+
+        PRIV_KEY=$(az sshkey export \
+          --name sshkey-${{ env.ENV_NAME }} \
+          --resource-group $RESOURCE_GROUP \
+          --file -)
+
+        echo "TF_VAR_ssh_public_key=$PUB_KEY" >> $GITHUB_ENV
+
+        # Stocke la clé privée temporairement
+        echo "$PRIV_KEY" > private_key.pem
+        chmod 600 private_key.pem
+        echo "SSH_PRIVATE_KEY_PATH=$(pwd)/private_key.pem" >> $GITHUB_ENV
+
     - name: Configure SSH
       run: |
         mkdir -p ~/.ssh
-        echo "${{ env.TF_VAR_ssh_private_key_base64 }}" | base64 -d > ~/.ssh/id_rsa
+        cp "${{ env.SSH_PRIVATE_KEY_PATH }}" ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ steps.get_public_ip.outputs.public_ip }} >> ~/.ssh/known_hosts
 
     - name: Run Ansible Playbook
       run: |
-        ansible-playbook ansible/playbook.yml -i "${{ steps.get_public_ip.outputs.public_ip }}," --user admin_db --private-key ~/.ssh/id_rsa
+        ansible-playbook ansible/playbook.yml -i "${{ steps.get_public_ip.outputs.public_ip }}," --user azureuser --private-key ~/.ssh/id_rsa
       working-directory: .

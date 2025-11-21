@@ -63,34 +63,13 @@ jobs:
         az storage account create -n ${{ env.STORAGE_ACCOUNT }} -g ${{ env.RESOURCE_GROUP }} -l ${{ env.LOCATION }} --sku Standard_LRS || true
         az storage container create --account-name ${{ env.STORAGE_ACCOUNT }} --name tfstate --auth-mode login || true
 
-    - name: Generate SSH key in Azure
-      id: sshkey
-      env:
-        LOCATION: westeurope
-        RESOURCE_GROUP: rg-stg_10
+    - name: Generate SSH key
       run: |
-        az sshkey create \
-          --name sshkey-${{ env.ENV_NAME }} \
-          --resource-group $RESOURCE_GROUP \
-          --location $LOCATION \
-          --only-show-errors
-
-        PUB_KEY=$(az sshkey show \
-          --name sshkey-${{ env.ENV_NAME }} \
-          --resource-group $RESOURCE_GROUP \
-          --query publicKey -o tsv)
-
-        PRIV_KEY=$(az sshkey export \
-          --name sshkey-${{ env.ENV_NAME }} \
-          --resource-group $RESOURCE_GROUP \
-          --file -)
-
-        echo "TF_VAR_ssh_public_key=$PUB_KEY" >> $GITHUB_ENV
-
-        # Stocke la clé privée temporairement
-        echo "$PRIV_KEY" > private_key.pem
-        chmod 600 private_key.pem
-        echo "SSH_PRIVATE_KEY_PATH=$(pwd)/private_key.pem" >> $GITHUB_ENV
+        ssh-keygen -t rsa -b 4096 -f id_rsa -N ""
+        echo "::add-mask::$(cat id_rsa)"
+        echo "::add-mask::$(cat id_rsa.pub)"
+        echo "TF_VAR_ssh_public_key=$(cat id_rsa.pub)" >> $GITHUB_ENV
+        echo "SSH_PRIVATE_KEY_PATH=$(pwd)/id_rsa" >> $GITHUB_ENV
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3

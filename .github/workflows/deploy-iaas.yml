@@ -69,6 +69,10 @@ jobs:
         terraform_version: 1.9.8
         terraform_wrapper: false
 
+    - name: Clean Terraform state for VM
+      working-directory: infra
+      run: terraform state rm module.vm.azurerm_linux_virtual_machine.vm || true
+
     # Le terraform s'occupe de crée les ressources et executer le ansible
     - name: Déploiement de l'infrastructure (Terraform)
       id: terraform

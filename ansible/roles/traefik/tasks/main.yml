@@ -16,22 +16,22 @@
     group: admin_db
     mode: '0755'
 
-# - name: Copy Traefik configuration file to the virtual machine
-  # copy:
-    # src: "{{ role_path }}/templates/traefik.yml"
-    # dest: /home/admin_db/traefik/files/traefik.yml
-    # mode: "0644"
-
-- name: Générer la config Traefik avec l'IP de la VM
-  ansible.builtin.template:
-    src: "{{ role_path }}/templates/traefik.yml.j2"
+- name: Copy Traefik configuration file to the virtual machine
+  copy:
+    src: "{{ role_path }}/templates/traefik.yml"
     dest: /home/admin_db/traefik/files/traefik.yml
-    owner: admin_db
-    group: admin_db
     mode: "0644"
-  vars:
-    app_host: "{{ vm_ip }}"
-    monitoring_host: "{{ vm_ip }}"
+
+# - name: Générer la config Traefik avec l'IP de la VM
+  # ansible.builtin.template:
+    # src: "{{ role_path }}/templates/traefik.yml.j2"
+    # dest: /home/admin_db/traefik/files/traefik.yml
+    # owner: admin_db
+    # group: admin_db
+    # mode: "0644"
+  # vars:
+    # app_host: "{{ vm_ip }}"
+    # monitoring_host: "{{ vm_ip }}"
 
 - name: Copy Traefik configuration file to the virtual machine
   copy:

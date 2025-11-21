@@ -51,7 +51,8 @@ http:
     app:
       entryPoints:
         - web
-      rule: Host(`app.local`)
+      # rule: Host(`app.local`)
+      rule: Host(`4.212.242.226`)
       middlewares:
         - redirect-to-https
       service: app
@@ -59,13 +60,15 @@ http:
     monitoring:
       entryPoints:
         - monitoring
-      rule: Host(`netdata.local`)
+      # rule: Host(`netdata.local`)
+      rule: Host(`4.212.242.226`)
       service: netdata
 
     app-secure:
       entryPoints:
         - websecure
-      rule: Host(`app.local`)
+      # rule: Host(`app.local`)
+      rule: Host(`4.212.242.226`)
       service: app
       tls:
         store: default

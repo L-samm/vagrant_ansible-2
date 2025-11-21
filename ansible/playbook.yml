@@ -3,8 +3,8 @@
   become: true
 
   roles:
-    - role: user
     - role: config
+    - role: user
     - role: konstruktoid.docker_rootless
       vars:
         docker_user_bashrc: true

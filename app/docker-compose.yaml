@@ -7,7 +7,9 @@ services:
   traefik:
     build: ../traefik
     container_name: traefik
+    restart: unless-stopped
     command:
+      - "--api.insecure=true"
       - "--configFile=/traefik.yml"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
@@ -15,7 +17,6 @@ services:
       - "--entrypoints.web.address=:8088"
       - "--entrypoints.websecure.address=:8443"
       - "--entrypoints.monitoring.address=:3000"
-      #- "--entrypoints.web.forwardedHeaders.insecure=true"
     ports:
       - "8088:8088"
       - "8443:8443"
@@ -30,6 +31,9 @@ services:
   app:
     # set container name app
     container_name: app
+    restart: unless-stopped
+    stdin_open: false
+    tty: false
     build:
       context: .
       dockerfile: Dockerfile
@@ -54,6 +58,7 @@ services:
       - "traefik.http.routers.app-secure.rule=Host(`${APP_HOST:-192.168.56.11}`)"
       - "traefik.http.routers.app-secure.entrypoints=websecure"
       - "traefik.http.routers.app-secure.tls=true"
+      - "traefik.http.services.app.loadbalancer.server.port=80"
     networks:
       - app_network
   db:

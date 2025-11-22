@@ -111,9 +111,7 @@ jobs:
         TF_VAR_ssh_public_key: ${{ env.TF_VAR_ssh_public_key }}
         VM_NAME: vm-stg
       run: |
-        terragrunt import azurerm_linux_virtual_machine.vm "/subscriptions/${{ env.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-stg_10/providers/Microsoft.Compute/virtualMachines/${{ env.VM_NAME }}-${{ env.ENV_NAME }}" || true
         terragrunt import azurerm_virtual_network.vnet "/subscriptions/${{ env.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-stg_10/providers/Microsoft.Network/virtualNetworks/vnet-${{ env.VM_NAME }}-${{ env.ENV_NAME }}" || true
-        terragrunt import azurerm_public_ip.vm_public_ip "/subscriptions/${{ env.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-stg_10/providers/Microsoft.Network/publicIPAddresses/pip-${{ env.VM_NAME }}-${{ env.ENV_NAME }}" || true
 
     # Appliquer l'infrastructure
     - name: Terragrunt Apply

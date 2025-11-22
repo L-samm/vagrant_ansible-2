@@ -4,7 +4,7 @@ remote_state {
     resource_group_name  = "rg-stg_10"
     storage_account_name = "tfstatebackendsammuel2"
     container_name       = "tfstate"
-    key                  = "\${path_relative_to_include()}/terraform.tfstate"
+    key                  = "${path_relative_to_include()}/terraform-stg.tfstate"
   }
 }
 

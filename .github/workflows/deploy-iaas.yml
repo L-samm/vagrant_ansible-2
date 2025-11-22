@@ -110,24 +110,9 @@ jobs:
         TF_VAR_env_name: ${{ env.ENV_NAME }}
         TF_VAR_ssh_public_key: ${{ env.TF_VAR_ssh_public_key }}
       run: |
-        terragrunt import azurerm_linux_virtual_machine.vm \
-          "/subscriptions/${{ env.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-stg_10/providers/Microsoft.Compute/virtualMachines/vm-${{ env.ENV_NAME }}" || true
-        terragrunt import azurerm_virtual_network.vnet \
-          "/subscriptions/${{ env.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-stg_10/providers/Microsoft.Network/virtualNetworks/vnet-vm-${{ env.ENV_NAME }}" || true
-        terragrunt import azurerm_public_ip.vm_public_ip \
-          "/subscriptions/${{ env.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-stg_10/providers/Microsoft.Network/publicIPAddresses/pip-vm-${{ env.ENV_NAME }}" || true
-
-    # Import ACR
-    - name: Import existing ACR (if exists)
-      working-directory: infra/envs/${{ env.ENV_NAME }}/acr
-      env:
-        ARM_CLIENT_ID: ${{ env.ARM_CLIENT_ID }}
-        ARM_CLIENT_SECRET: ${{ env.ARM_CLIENT_SECRET }}
-        ARM_SUBSCRIPTION_ID: ${{ env.ARM_SUBSCRIPTION_ID }}
-        ARM_TENANT_ID: ${{ env.ARM_TENANT_ID }}
-      run: |
-        terragrunt import azurerm_container_registry.acr \
-          "/subscriptions/${{ env.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-stg_10/providers/Microsoft.ContainerRegistry/registries/acrstg10${{ env.ENV_NAME }}" || true
+        terragrunt import azurerm_linux_virtual_machine.vm "/subscriptions/${{ env.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-stg_10/providers/Microsoft.Compute/virtualMachines/vm-${{ env.ENV_NAME }}" || true
+        terragrunt import azurerm_virtual_network.vnet "/subscriptions/${{ env.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-stg_10/providers/Microsoft.Network/virtualNetworks/vnet-vm-${{ env.ENV_NAME }}" || true
+        terragrunt import azurerm_public_ip.vm_public_ip "/subscriptions/${{ env.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-stg_10/providers/Microsoft.Network/publicIPAddresses/pip-vm-${{ env.ENV_NAME }}" || true
 
     # Appliquer l'infrastructure
     - name: Terragrunt Apply

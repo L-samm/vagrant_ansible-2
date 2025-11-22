@@ -21,7 +21,6 @@ jobs:
 
     - name: Déterminer l'environnement
       id: set-env
-
       run: |
         if [[ "$GITHUB_REF" == "refs/heads/dev" ]]; then
           echo "ENV_NAME=dev" >> $GITHUB_ENV
@@ -71,44 +70,73 @@ jobs:
         echo "TF_VAR_ssh_public_key=$(cat id_rsa.pub)" >> $GITHUB_ENV
         echo "SSH_PRIVATE_KEY_PATH=$(pwd)/id_rsa" >> $GITHUB_ENV
 
+    # Setup Terraform (même si vous utilisez Terragrunt, il en a besoin)
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: 1.9.8
-        terraform_wrapper: true
+        terraform_wrapper: false  # ← IMPORTANT : false pour Terragrunt
 
-    - name: Setup Terragrunt
-      uses: gruntwork-io/setup-terragrunt@v1.1.0
+    # Installer Terragrunt
+    - name: Install Terragrunt
+      run: |
+        TERRAGRUNT_VERSION=v0.55.1  # Adaptez à votre version
+        wget https://github.com/gruntwork-io/terragrunt/releases/download/${TERRAGRUNT_VERSION}/terragrunt_linux_amd64
+        chmod +x terragrunt_linux_amd64
+        sudo mv terragrunt_linux_amd64 /usr/local/bin/terragrunt
+        terragrunt --version
 
-    - name: Clean Terragrunt state for VM
-      working-directory: infra/envs/${{ env.ENV_NAME }}/vm
+    # Initialiser Terragrunt
+    - name: Terragrunt Init
+      working-directory: infra/envs/${{ env.ENV_NAME }}
+      env:
+        ARM_CLIENT_ID: ${{ env.ARM_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ env.ARM_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ env.ARM_SUBSCRIPTION_ID }}
+        ARM_TENANT_ID: ${{ env.ARM_TENANT_ID }}
+        TF_VAR_env_name: ${{ env.ENV_NAME }}
+        TF_VAR_ssh_public_key: ${{ env.TF_VAR_ssh_public_key }}
       run: |
         terragrunt run-all init
-        terragrunt state rm module.vm.azurerm_linux_virtual_machine.vm || true
 
-    - name: Déploiement de l'infrastructure (Terragrunt)
-      id: terragrunt
+    # Import de la VM (si elle existe déjà)
+    - name: Import existing VM (if exists)
       working-directory: infra/envs/${{ env.ENV_NAME }}/vm
       env:
-        ARM_CLIENT_ID:       ${{ env.ARM_CLIENT_ID }}
-        ARM_CLIENT_SECRET:   ${{ env.ARM_CLIENT_SECRET }}
+        ARM_CLIENT_ID: ${{ env.ARM_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ env.ARM_CLIENT_SECRET }}
         ARM_SUBSCRIPTION_ID: ${{ env.ARM_SUBSCRIPTION_ID }}
-        ARM_TENANT_ID:       ${{ env.ARM_TENANT_ID }}
-
+        ARM_TENANT_ID: ${{ env.ARM_TENANT_ID }}
         TF_VAR_env_name: ${{ env.ENV_NAME }}
-        TF_VAR_ssh_public_key:  ${{ env.TF_VAR_ssh_public_key }}
+        TF_VAR_ssh_public_key: ${{ env.TF_VAR_ssh_public_key }}
       run: |
-        terragrunt import -var-file="terraform.tfvars" module.vm.azurerm_linux_virtual_machine.vm /subscriptions/6b9318b1-2215-418a-b0fd-ba0832e9b333/resourceGroups/rg-stg_10/providers/Microsoft.Compute/virtualMachines/vm-stg-${{ env.ENV_NAME }}
-        terragrunt apply -auto-approve -var-file="terraform.tfvars"
+        terragrunt import azurerm_linux_virtual_machine.vm \
+          "/subscriptions/${{ env.ARM_SUBSCRIPTION_ID }}/resourceGroups/rg-stg_10/providers/Microsoft.Compute/virtualMachines/vm-${{ env.ENV_NAME }}" || true
+      continue-on-error: true
 
+    # Appliquer l'infrastructure
+    - name: Terragrunt Apply
+      id: terragrunt
+      working-directory: infra/envs/${{ env.ENV_NAME }}
+      env:
+        ARM_CLIENT_ID: ${{ env.ARM_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ env.ARM_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ env.ARM_SUBSCRIPTION_ID }}
+        ARM_TENANT_ID: ${{ env.ARM_TENANT_ID }}
+        TF_VAR_env_name: ${{ env.ENV_NAME }}
+        TF_VAR_ssh_public_key: ${{ env.TF_VAR_ssh_public_key }}
+      run: |
+        terragrunt run-all apply -auto-approve --terragrunt-non-interactive
+
+    # Récupérer l'IP publique
     - name: Get VM Public IP
       id: get_public_ip
       working-directory: infra/envs/${{ env.ENV_NAME }}/vm
       env:
-        ARM_CLIENT_ID:       ${{ env.ARM_CLIENT_ID }}
-        ARM_CLIENT_SECRET:   ${{ env.ARM_CLIENT_SECRET }}
+        ARM_CLIENT_ID: ${{ env.ARM_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ env.ARM_CLIENT_SECRET }}
         ARM_SUBSCRIPTION_ID: ${{ env.ARM_SUBSCRIPTION_ID }}
-        ARM_TENANT_ID:       ${{ env.TENANT_ID }}
+        ARM_TENANT_ID: ${{ env.ARM_TENANT_ID }}  # ← Corrigé
       run: |
         PUBLIC_IP=$(terragrunt output -raw public_ip_vm)
         echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
@@ -131,7 +159,6 @@ jobs:
     - name: Install Python 3.10 on VM if not present
       run: |
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa azureuser@${{ steps.get_public_ip.outputs.public_ip }} << 'EOF'
-          # Vérifier si Python 3.10 est déjà installé
           if command -v python3.10 &> /dev/null; then
             echo "Python 3.10 is already installed: $(python3.10 --version)"
             exit 0
@@ -157,4 +184,4 @@ jobs:
       working-directory: .
             
     - name: Cleanup SSH key
-      run: rm -f private_key.pem
+      run: rm -f id_rsa id_rsa.pub

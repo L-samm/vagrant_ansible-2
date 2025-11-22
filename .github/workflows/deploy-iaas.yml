@@ -77,6 +77,9 @@ jobs:
         terraform_version: 1.9.8
         terraform_wrapper: true
 
+    - name: Setup Terragrunt
+      uses: gruntwork-io/setup-terragrunt@v1.1.0
+
     - name: Clean Terragrunt state for VM
       working-directory: infra/envs/${{ env.ENV_NAME }}/vm
       run: |

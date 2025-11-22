@@ -1,13 +1,14 @@
-# Utilisez une image Docker officielle pour PHP 7.4 avec Apache
+# Utilisez une image Docker officielle pour PHP 8.2 avec Apache
 FROM php:8.2.8-apache
 
-# Installez les extensions PHP nécessaires
-RUN docker-php-ext-install pdo_mysql
-
-# Fix dpkg pour Docker Rootless + installation propre des paquets
-RUN rm -f /var/lib/dpkg/status-old \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends git unzip p7zip-full \
+# Installer les dépendances nécessaires pour pdo_mysql
+RUN apt-get update && apt-get install -y \
+    default-libmysqlclient-dev \
+    libzip-dev \
+    git \
+    unzip \
+    p7zip-full \
+    && docker-php-ext-install pdo_mysql \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -20,8 +21,8 @@ COPY . /var/www/html/
 # Installez les dépendances de l'application
 RUN composer install --no-dev --optimize-autoloader
 
-RUN chown -R www-data:www-data /var/www/html/vendor /var/www/html/storage /var/www/html/bootstrap /var/www/html/public /var/www/html/app /var/www/html/config /var/www/html/routes /var/www/html/resources
-RUN chmod -R 755 /var/www/html/vendor /var/www/html/storage /var/www/html/bootstrap /var/www/html/public /var/www/html/app /var/www/html/config /var/www/html/routes /var/www/html/resources
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html
 
 # Modifiez la configuration d'Apache pour pointer vers le répertoire public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public

@@ -1,3 +1,7 @@
+terraform {
+  backend "azurerm" {}
+}
+
 resource "azurerm_virtual_network" "vnet" {
   name                = "vnet-${var.vm_name}-${var.env_name}"
   address_space       = ["10.1.0.0/16"]

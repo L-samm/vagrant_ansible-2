@@ -5,3 +5,5 @@
 *.lock.hcl
 *.tfstate
 docker-compose.*.yaml
+*.pem
+.idea

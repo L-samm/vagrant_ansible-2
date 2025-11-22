@@ -119,17 +119,38 @@
       MYSQL_ROOT_PASSWORD=app_root_password
   when: inventory_hostname == 'vm1'
 
+- name: Debug memory before Docker build
+  ansible.builtin.shell: |
+    echo "=== Memory ==="
+    free -h
+    echo "=== Swap ==="
+    swapon --show
+    echo "=== Disk ==="
+    df -h
+  register: pre_build_debug
+  become: yes
+
+- name: Afficher debug memory
+  debug:
+    var: pre_build_debug.stdout_lines
+
 - name: Builder les images Docker
   become: true
   become_user: admin_db
-  ansible.builtin.command: >
-    /home/admin_db/bin/docker --host unix:///run/user/{{ admin_db_uid.stdout }}/docker.sock
-    compose -f /home/admin_db/app/docker-compose.yaml build
-  async: 600
+  ansible.builtin.shell: |
+    set -e
+    /home/admin_db/bin/docker --host unix:///run/user/{{ admin_db_uid.stdout }}/docker.sock \
+      compose -f /home/admin_db/app/docker-compose.yaml build
+  async: 900
   poll: 10
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ admin_db_uid.stdout }}"
     DOCKER_BUILDKIT: "0"
+    APP_HOST: "{{ vm_ip }}"
+    MYSQL_DATABASE: "app_database"
+    MYSQL_USER: "app_user"
+    MYSQL_PASSWORD: "app_password"
+    MYSQL_ROOT_PASSWORD: "app_root_password"
   register: docker_build_result
 
 - name: Déployer l'app et la db via docker_compose
@@ -150,6 +171,10 @@
     DOCKER_BUILDKIT: "0"
     XDG_RUNTIME_DIR: "/run/user/{{ admin_db_uid.stdout }}"
     APP_HOST: "{{ vm_ip }}"
+    MYSQL_DATABASE: "app_database"
+    MYSQL_USER: "app_user"
+    MYSQL_PASSWORD: "app_password"
+    MYSQL_ROOT_PASSWORD: "app_root_password"
   register: docker_compose_result
   when: inventory_hostname == 'vm1'
 

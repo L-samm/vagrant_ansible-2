@@ -5,8 +5,8 @@
     ansible_python_interpreter: /usr/bin/python3
 
   roles:
-    - role: config
     - role: user
+    - role: config
     - role: konstruktoid.docker_rootless
       vars:
         docker_user_bashrc: true

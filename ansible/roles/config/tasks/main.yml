@@ -3,40 +3,42 @@
     path: /swap
     state: directory
     mode: '0755'
+  become: yes
 
 - name: Create 8GB swap file
   ansible.builtin.command: "fallocate -l 8G /swap/swapfile"
   args:
     creates: /swap/swapfile
+  become: yes
 
 - name: Set correct permissions for swap file
   ansible.builtin.file:
     path: /swap/swapfile
     mode: '0600'
+  become: yes
 
-- name: Check if swap is already enabled
-  ansible.builtin.shell: "grep -q '/swap/swapfile' /proc/swaps"
-  register: swap_check
-  ignore_errors: true
+- name: Check if swap file is formatted
+  ansible.builtin.command: file /swap/swapfile
+  register: swap_file_check
+  changed_when: false
+  become: yes
 
-- name: Disable swap if already active on the swap file
-  ansible.builtin.command:
-    cmd: "swapoff /swap/swapfile"
-  when: swap_check.rc == 0  # Désactiver le swap si déjà activé
-  ignore_errors: true  # Ignorer si swapoff échoue pour une autre raison
+- name: Format swap file if needed
+  ansible.builtin.command: mkswap /swap/swapfile
+  when: "'swap file' not in swap_file_check.stdout"
+  become: yes
 
-- name: Format swap file
-  ansible.builtin.command:
-    cmd: "mkswap /swap/swapfile"
-  when: swap_check.rc != 0  # Formater le swap seulement si non activé
-  args:
-    creates: /dev/mapper/swap
+- name: Check if swap is currently active
+  ansible.builtin.shell: swapon --show | grep -q '/swap/swapfile'
+  register: swap_active_check
+  changed_when: false
+  failed_when: false
+  become: yes
 
 - name: Enable swap file
-  ansible.builtin.command:
-    cmd: "swapon /swap/swapfile"
-  args:
-    creates: /proc/swaps
+  ansible.builtin.command: swapon /swap/swapfile
+  when: swap_active_check.rc != 0
+  become: yes
 
 - name: Add swap entry to /etc/fstab
   ansible.builtin.lineinfile:
@@ -44,3 +46,24 @@
     line: '/swap/swapfile none swap sw 0 0'
     create: true
     state: present
+  become: yes
+
+- name: Vérifier que le swap est actif
+  ansible.builtin.command: swapon --show
+  register: swap_status
+  changed_when: false
+  become: yes
+
+- name: Afficher le statut du swap
+  debug:
+    var: swap_status.stdout_lines
+
+- name: Afficher la mémoire disponible
+  ansible.builtin.command: free -h
+  register: memory_status
+  changed_when: false
+  become: yes
+
+- name: Afficher l'état de la mémoire
+  debug:
+    var: memory_status.stdout_lines

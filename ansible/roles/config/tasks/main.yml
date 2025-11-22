@@ -14,13 +14,27 @@
     path: /swap/swapfile
     mode: '0600'
 
+- name: Check if swap is already enabled
+  ansible.builtin.shell: "grep -q '/swap/swapfile' /proc/swaps"
+  register: swap_check
+  ignore_errors: true
+
+- name: Disable swap if already active on the swap file
+  ansible.builtin.command:
+    cmd: "swapoff /swap/swapfile"
+  when: swap_check.rc == 0  # Désactiver le swap si déjà activé
+  ignore_errors: true  # Ignorer si swapoff échoue pour une autre raison
+
 - name: Format swap file
-  ansible.builtin.command: "mkswap /swap/swapfile"
+  ansible.builtin.command:
+    cmd: "mkswap /swap/swapfile"
+  when: swap_check.rc != 0  # Formater le swap seulement si non activé
   args:
     creates: /dev/mapper/swap
 
 - name: Enable swap file
-  ansible.builtin.command: "swapon /swap/swapfile"
+  ansible.builtin.command:
+    cmd: "swapon /swap/swapfile"
   args:
     creates: /proc/swaps
 

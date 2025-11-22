@@ -5,18 +5,25 @@ networks:
 
 services:
   traefik:
-    image: "traefik:v3.0"
+    build: ../traefik
+    container_name: traefik
     command:
+      - "--configFile=/traefik.yml"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:8088"
-      - "--entrypoints.monitor.address=:19999"
       - "--providers.docker.network=app_network"
+      - "--entrypoints.web.address=:8088"
+      - "--entrypoints.websecure.address=:8443"
+      - "--entrypoints.monitoring.address=:3000"
+      #- "--entrypoints.web.forwardedHeaders.insecure=true"
     ports:
-      - "8088:8088" # Web (HTTP)
-      - "8080:8080" # Dashboard
+      - "8088:8088"
+      - "8443:8443"
+      - "3000:3000"
+      - "8080:8080"
     volumes:
       - "${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock:ro"
+      - "/home/admin_db/traefik/files:/etc/traefik"
     networks:
       - app_network
 
@@ -40,9 +47,13 @@ services:
       - db
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.entrypoints=web"
-      - "traefik.http.routers.app.rule=HostRegexp(`{host:.+}`)"
-      - "traefik.http.services.app.loadbalancer.server.port=80"
+      # HTTP
+      - "traefik.http.routers.app.rule=Host(`${APP_HOST:-192.168.56.11}`)"
+      - "traefik.http.routers.app.entrypoints=web" 
+      # HTTPS
+      - "traefik.http.routers.app-secure.rule=Host(`${APP_HOST:-192.168.56.11}`)"
+      - "traefik.http.routers.app-secure.entrypoints=websecure"
+      - "traefik.http.routers.app-secure.tls=true"
     networks:
       - app_network
   db:
@@ -50,10 +61,10 @@ services:
     restart: unless-stopped
     command: --default-authentication-plugin=mysql_native_password
     environment:
-      MYSQL_DATABASE: app_database
-      MYSQL_USER: app_user
-      MYSQL_PASSWORD: app_password
-      MYSQL_ROOT_PASSWORD: app_root_password
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-app_database}
+      MYSQL_USER: ${MYSQL_USER:-app_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-app_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-app_root_password}
       MYSQL_TCP_PORT: 3306
     ports:
       - "3306:3306"
@@ -81,10 +92,13 @@ services:
       - apparmor:unconfined
     volumes:
       - "${XDG_RUNTIME_DIR}/docker.sock:/var/run/docker.sock:ro"
+      - /home/admin_db/app/storage/logs:/var/log/laravel:ro
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.monitoring.entrypoints=monitor"
-      - "traefik.http.routers.monitoring.rule=HostRegexp(`{host:.+}`)"
+      - "traefik.http.routers.monitoring.rule=Host(`${APP_HOST:-192.168.56.11}`)"
+      - "traefik.http.routers.monitoring.entrypoints=monitoring"
       - "traefik.http.services.netdata.loadbalancer.server.port=19999"
     networks:
       - app_network

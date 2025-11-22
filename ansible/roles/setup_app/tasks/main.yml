@@ -1,7 +1,16 @@
+- name: Récupérer l'UID de admin_db
+  ansible.builtin.command: id -u admin_db
+  register: admin_db_uid
+  changed_when: false
+
 - name: Activer linger pour admin_db
   ansible.builtin.command: loginctl enable-linger admin_db
   args:
     creates: /var/lib/systemd/linger/admin_db
+
+- name: Debug admin_db_uid
+  debug:
+    var: admin_db_uid.stdout
 
 - name: Créer la configuration DNS pour Docker rootless
   become: true
@@ -18,7 +27,10 @@
     dest: "/home/admin_db/.config/docker/daemon.json"
     content: |
       {
-        "dns": ["8.8.8.8", "1.1.1.1"]
+        "dns": ["8.8.8.8", "1.1.1.1"],
+        "features": {
+          "buildkit": false
+        }
       }
     mode: "0644"
 
@@ -30,40 +42,35 @@
     XDG_RUNTIME_DIR: "/run/user/{{ admin_db_uid.stdout | default('1001') }}"
 
 - name: Démarrer le service rootless Docker pour admin_db
+  become: true
+  become_user: admin_db
   ansible.builtin.systemd:
     name: docker.service
     scope: user
     state: started
     enabled: yes
-  become: true
-  become_user: admin_db
 
 - name: Redémarrer le service rootless Docker pour appliquer le DNS
+  become: true
+  become_user: admin_db
   ansible.builtin.systemd:
     name: docker.service
     scope: user
     state: restarted
-  become: true
-  become_user: admin_db
 
-- name: Récupérer l'UID de admin_db
-  ansible.builtin.command: id -u admin_db
-  register: admin_db_uid
-  changed_when: false
+- name: Pause pour laisser Docker rootless démarrer
+  ansible.builtin.pause:
+    seconds: 2
 
-- name: Debug admin_db_uid
-  debug:
-    var: admin_db_uid.stdout
-
-- name: Remove old docker image if it exists
-  docker_image:
-      source: local
-      name: traefik_ms_build
-      tag: latest
-      force_absent: true
-  ignore_errors: yes
-  environment:
-    DOCKER_HOST: "unix:///run/user/{{ admin_db_uid.stdout | default('1001') }}/docker.sock"
+# - name: Remove old docker image if it exists
+  # docker_image:
+      # source: local
+      # name: traefik_ms_build
+      # tag: latest
+      # force_absent: true
+  # ignore_errors: yes
+  # environment:
+    # DOCKER_HOST: "unix:///run/user/{{ admin_db_uid.stdout | default('1001') }}/docker.sock"
 
 # - name: Build Docker image
   # community.docker.docker_image:
@@ -95,7 +102,21 @@
     mode: "0644"
   vars:
     APP_HOST: "{{ vm_ip }}"
-    MONITORING_HOST: "{{ vm_ip }}"
+  when: inventory_hostname == 'vm1'
+
+- name: Générer le fichier .env pour Docker Compose
+  ansible.builtin.copy:
+    dest: "/home/admin_db/app/.env.docker"
+    owner: "admin_db"
+    group: "admin_db"
+    mode: "0644"
+    content: |
+      APP_HOST={{ vm_ip }}
+      # Variables MySQL
+      MYSQL_DATABASE=app_database
+      MYSQL_USER=app_user
+      MYSQL_PASSWORD=app_password
+      MYSQL_ROOT_PASSWORD=app_root_password
   when: inventory_hostname == 'vm1'
 
 - name: Builder les images Docker
@@ -118,6 +139,8 @@
     project_src: "/home/admin_db/app"
     files:
       - docker-compose.yaml
+    env_files:
+      - .env.docker
     state: present
     recreate: auto
     remove_orphans: true
@@ -126,6 +149,7 @@
   environment:
     DOCKER_BUILDKIT: "0"
     XDG_RUNTIME_DIR: "/run/user/{{ admin_db_uid.stdout }}"
+    APP_HOST: "{{ vm_ip }}"
   register: docker_compose_result
   when: inventory_hostname == 'vm1'
 
@@ -139,12 +163,15 @@
   delay: 5
   when: inventory_hostname == 'vm1'
 
-- name: Wait for MySQL to be ready
-  wait_for:
-    host: "{{ ansible_host }}"
-    port: 3306
-    delay: 10
-    timeout: 60
+- name: Vérifier que Traefik est lancé
+  community.docker.docker_container_info:
+    name: traefik
+    docker_host: "unix:///run/user/{{ admin_db_uid.stdout }}/docker.sock"
+  register: traefik_info
+  until: traefik_info.container is not none and traefik_info.container.State.Status == "running"
+  retries: 10
+  delay: 3
+  when: inventory_hostname == 'vm1'
 
 - name: Lancer les migrations Laravel
   become: true

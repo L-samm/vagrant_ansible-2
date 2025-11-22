@@ -5,16 +5,16 @@ global:
 entryPoints:
   web:
     address: ":8088"
-    http:
-      redirections:
-        entryPoint:
-          to: websecure
-          scheme: https
-          permanent: true
+    # http:
+      # redirections:
+        # entryPoint:
+          # to: websecure
+          # scheme: https
+          # permanent: true
   websecure:
     address: ":8443"
-    http:
-      tls: true
+    # http:
+      # tls: true
   monitoring:
     address: ":3000"
 
@@ -52,26 +52,27 @@ http:
       entryPoints:
         - web
       # rule: Host(`app.local`)
-      rule: Host(`4.212.242.226`)
-      middlewares:
-        - redirect-to-https
+      rule: Host(`192.168.56.11`)
+      # middlewares:
+        # - redirect-to-https
       service: app
 
     monitoring:
       entryPoints:
         - monitoring
       # rule: Host(`netdata.local`)
-      rule: Host(`4.212.242.226`)
+      rule: Host(`192.168.56.11`)
       service: netdata
 
     app-secure:
       entryPoints:
         - websecure
       # rule: Host(`app.local`)
-      rule: Host(`4.212.242.226`)
+      rule: Host(`192.168.56.11`)
       service: app
-      tls:
-        store: default
+      tls: {}
+      # tls:
+        # store: default
 
   services:
     app:

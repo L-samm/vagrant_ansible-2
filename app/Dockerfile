@@ -4,7 +4,12 @@ FROM php:8.2.8-apache
 # Installez les extensions PHP nécessaires
 RUN docker-php-ext-install pdo_mysql
 
-RUN apt-get update && apt-get install -y git unzip p7zip-full
+# Fix dpkg pour Docker Rootless + installation propre des paquets
+RUN rm -f /var/lib/dpkg/status-old \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends git unzip p7zip-full \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Installez Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -13,7 +18,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 COPY . /var/www/html/
 
 # Installez les dépendances de l'application
-RUN composer install
+RUN composer install --no-dev --optimize-autoloader
 
 RUN chown -R www-data:www-data /var/www/html/vendor /var/www/html/storage /var/www/html/bootstrap /var/www/html/public /var/www/html/app /var/www/html/config /var/www/html/routes /var/www/html/resources
 RUN chmod -R 755 /var/www/html/vendor /var/www/html/storage /var/www/html/bootstrap /var/www/html/public /var/www/html/app /var/www/html/config /var/www/html/routes /var/www/html/resources

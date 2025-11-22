@@ -1,0 +1,9 @@
+inputs = {
+  resource_group_name  = "rg-stg_10"
+  location             = "westeurope"
+  vm_name              = "PROD_vm-stg"
+  admin_username       = "azureuser"
+  env_name             = "prod"
+  acr_name             = "acrstg10prod"
+  ssh_public_key       = ""
+}

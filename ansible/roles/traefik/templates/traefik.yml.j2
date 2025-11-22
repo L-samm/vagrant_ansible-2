@@ -51,8 +51,7 @@ http:
     app:
       entryPoints:
         - web
-      # rule: Host(`app.local`)
-      rule: Host(`192.168.56.11`)
+      rule: Host(`{{ vm_ip }}`)
       # middlewares:
         # - redirect-to-https
       service: app
@@ -60,15 +59,13 @@ http:
     monitoring:
       entryPoints:
         - monitoring
-      # rule: Host(`netdata.local`)
-      rule: Host(`192.168.56.11`)
+      rule: Host(`{{ vm_ip }}`)
       service: netdata
 
     app-secure:
       entryPoints:
         - websecure
-      # rule: Host(`app.local`)
-      rule: Host(`192.168.56.11`)
+      rule: Host(`{{ vm_ip }}`)
       service: app
       tls: {}
       # tls:
